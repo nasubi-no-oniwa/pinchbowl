@@ -107,3 +107,20 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 @media (max-width: 560px) { .pl .nm { display: none; } .pl { margin-left: 50px; padding: 4px 10px 4px 8px; } .pl .cnt { font-size: 20px; } .mid { min-width: 0; padding: 3px 8px 5px; } .ph { font-size: 13px; } }
 @media (max-aspect-ratio: 1/1) { .logo { font-size: 46px; } .logo span { display: inline; } .sub { margin: 4px 0 6px; } .sel { margin-top: 4px; } .lv-row { margin-bottom: 8px; } .btn { padding: 10px 16px; font-size: 16px; } .btn.lv { min-width: 0; flex: 1; } .lv-row { flex-wrap: nowrap; } .btn.on-btn { min-width: 0; width: 100%; } .row2 { margin-top: 8px; } }
+
+.pl .bn { font-style: normal; font-size: 12px; color: var(--yel); }
+.pl .bn:empty { display: none; }
+#mini { position: absolute; right: max(10px, env(safe-area-inset-right)); top: 54px; width: 72px; height: 120px; border-radius: 10px; background: rgba(22,11,38,.6); box-shadow: 0 0 0 2px rgba(255,255,255,.18); display: none; }
+#hud.mini #mini { display: block; }
+.spd { right: auto; left: max(10px, env(safe-area-inset-left)); top: 54px; }
+.bump-ui { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(46px, calc(env(safe-area-inset-bottom) + 40px)); display: none; flex-direction: column; align-items: flex-end; gap: 6px; }
+#hud.throw .bump-ui { display: flex; }
+.bump-edit { display: none; gap: 6px; }
+.bump-ui.on .bump-edit { display: flex; } .bump-ui.on #btn-bump { display: none; }
+.bump-ui.used #btn-bump { display: none; }
+#btn-bump { background: var(--yel); color: var(--ink); box-shadow: 0 4px 0 #b7820a; }
+.toasts { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.toast { background: rgba(208,16,58,.85); color: #fff; padding: 3px 12px; border-radius: 999px; font-size: 14px; animation: tst 1.4s ease-out forwards; }
+.toast.ok { background: rgba(26,143,208,.85); }
+@keyframes tst { 0% { opacity: 0; transform: translateY(8px); } 15% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
+.rs .bo { font-size: 12px; color: #776a8a; }

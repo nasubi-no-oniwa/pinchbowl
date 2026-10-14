@@ -76,7 +76,8 @@
         <li>「投げる番」と「よける番」を<b>3回ずつ</b>交代。最後に<b>ピンがたくさん残っていた方が勝ち</b>。</li>
         <li><b>よける番：</b>左がわをさわってスティックで動く（ジャンプはできない）。動いてほかのピンにぶつかると、そのピンも倒れてしまう。</li>
         <li>ピンにたくさん当たって<b class="blue">青く光った球</b>は、ぶつかれば<b>止められる</b>。<b class="red">赤い球</b>に当たると<b>ふっとんで、その場で負け！</b></li>
-        <li><b>投げる番：</b>左右にドラッグで位置、<b>上にスワイプ</b>で投げる。速くスワイプすると速い球、指を曲げるとカーブ。横のガードレールで<b>はね返り</b>もねらえます。</li>
+        <li><b>前の方のピンをえらぶとボーナス</b>（前から5列：＋15本、6〜10列：＋8本）。最後まで生き残ったら足されます。</li>
+        <li><b>投げる番：</b>左右にドラッグで位置、<b>上にスワイプ</b>で投げる。速くスワイプすると速い球、指を曲げるとカーブ。横のガードレールで<b>はね返り</b>もねらえます。「＋バンパー」で、1投に1本<b>はね返り用のバンパー</b>を好きな場所・向きに置けます（相手にも見えます）。</li>
       </ol>
       <p class="note">PC：よける＝WASD／矢印　投げる＝マウスでスワイプ（キーボードなら ←→で位置、Q/Eでカーブ、スペース長押しで投げる）</p>
       <p class="credit">素材：Kenney「Impact Sounds」（CC0）　音楽：自作</p>
@@ -88,9 +89,9 @@
 <!-- 試合の表示 -->
 <div id="hud" class="hide">
   <div class="topbar">
-    <div class="pl" id="pl0"><i class="dot"></i><span class="nm"></span><b class="cnt">100</b></div>
+    <div class="pl" id="pl0"><i class="dot"></i><span class="nm"></span><b class="cnt">100</b><em class="bn"></em></div>
     <div class="mid"><div class="tn" id="tn"></div><div class="ph" id="ph"></div><div class="tbar"><i id="tbar"></i></div></div>
-    <div class="pl r" id="pl1"><b class="cnt">100</b><span class="nm"></span><i class="dot"></i></div>
+    <div class="pl r" id="pl1"><em class="bn"></em><b class="cnt">100</b><span class="nm"></span><i class="dot"></i></div>
   </div>
   <button class="btn ic ui" id="btn-pause">Ⅱ</button>
   <button class="btn ic ui" id="btn-cam">視点</button>
@@ -100,6 +101,12 @@
   <div class="kbar ui" id="kbar"><i id="kbar-i"></i></div>
   <button class="btn sm ui" id="btn-auto">おまかせ</button>
   <div class="watch-tag" id="watch-tag">観戦中</div>
+  <canvas id="mini" width="120" height="200"></canvas>
+  <div class="bump-ui ui" id="bump-ui">
+    <button class="btn sm" id="btn-bump">＋ バンパー</button>
+    <div class="bump-edit" id="bump-edit"><button class="btn sm" id="btn-rot">↻ まわす</button><button class="btn sm" id="btn-bdel">とる</button><button class="btn sm hot" id="btn-bok">OK</button></div>
+  </div>
+  <div class="toasts" id="toasts"></div>
 </div>
 <div id="stick"><div id="knob"></div></div>
 

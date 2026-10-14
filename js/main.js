@@ -43,7 +43,7 @@
     }, o);
     G.pickIdx = null;
     hud(true); show(null); hideBanner(); $('hud').className = ''; PB.bgm.start('bgm');
-    for (const s of [0, 1]) { const el = $('pl' + s), c = PB.COLORS[G.looks[s].col]; el.querySelector('.nm').textContent = G.names[s]; el.querySelector('.dot').style.background = c.c; el.querySelector('.dot').style.color = c.c; el.querySelector('.cnt').textContent = 100; }
+    for (const s of [0, 1]) { const el = $('pl' + s), c = PB.COLORS[G.looks[s].col]; el.querySelector('.bn').textContent = ''; el.querySelector('.nm').textContent = G.names[s]; el.querySelector('.dot').style.background = c.c; el.querySelector('.dot').style.color = c.c; el.querySelector('.cnt').textContent = 100; }
     // 自分の見え方（観戦ならスロット0）
     G.my = G.slot >= 0 ? G.slot : 0;
     startPick();
@@ -53,7 +53,7 @@
     R.setLook(G.looks[G.my]);
     G.snapCam = true;
     G.pickView = { pins: titleView.pins.map(p => p.slice()), ball: null, me: -1, stoppable: false, held: false, blown: false, bv: 0, out: true };
-    if (G.slot >= 0) { banner('自分になるピンを<br>タップ！', 'yel', 2.2); $('hint').textContent = '前の方は球が速くて危ない。うしろは安全だけど…'; }
+    if (G.slot >= 0) { banner('自分になるピンを<br>タップ！', 'yel', 2.2); $('hint').textContent = '前ほどボーナス！（生き残ったら +15 / +8 本）　でも球は速くて危ない'; }
     else $('hint').textContent = 'ふたりがピンをえらんでいます…';
   }
   function choosePin(i) {
@@ -66,8 +66,13 @@
     $('hud').classList.remove('pick'); I.mode = 'none';
     for (const s of [0, 1]) if (isLocal(s)) G.lanes[s] = new PB.Lane({ me: G.picks[s], seed: G.seed + s * 77 });
     if (G.mode === 'cpu') G.dodger = new PB.Dodger(G.lv);
+    for (const s of [0, 1]) { const b = bonusOf(G.picks[s]); $('pl' + s).querySelector('.bn').textContent = b ? '+' + b : ''; }
     nextTurn();
   }
+  const bonusOf = i => { if (i == null) return 0; const r = PB.layout()[i][2]; for (const [a, b, p] of C.BONUS) if (r >= a && r <= b) return p; return 0; };
+  const score = s => G.remain[s] + (G.blownBy === s ? 0 : bonusOf(G.picks[s]));
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function toast(txt, ok) { const t = document.createElement('div'); t.className = 'toast' + (ok ? ' ok' : ''); t.textContent = txt; $('toasts').appendChild(t); setTimeout(() => t.remove(), 1500); }
   const isLocal = s => G.mode === 'cpu' || (G.mode === 'net' && s === G.slot);
   const thrower = k => k % 2, defender = k => 1 - (k % 2);
   const isCpu = s => G.mode === 'cpu' && s === 1;
@@ -78,6 +83,8 @@
     const th = thrower(G.k), df = defender(G.k);
     G.snaps = [[], []]; G.phase = 'intro'; G.pt = 0; G.thrown = false; G.aimX = 0; G.spinK = 0; G.charge = -1; G.resShown = false; G.firstCrash = false; G.stoppedSaid = false; G.lastWarn = 0;
     G.cpuAt = 1.6 + Math.random() * 2.6; G.cpuPlan = null;
+    G.bm = null; G.placing = false; G.slowUntil = 0; G.slowCrash = false; G.slowNear = false; G.selfT = -9; G.selfAcc = 0; R.setBumper(null);
+    $('bump-ui').classList.remove('on', 'used'); $('hud').classList.remove('throw');
     R.setLook(G.looks[df]); R.setBall(G.looks[th].col); R.setFace('me'); R.trailPts.length = 0;
     const me = G.slot;
     const n = Math.floor(G.k / 2) + 1;
@@ -95,7 +102,7 @@
     G.phase = 'aim'; G.pt = 0;
     const th = thrower(G.k), df = defender(G.k);
     $('hud').classList.toggle('dodge', G.slot === df);
-    if (G.slot === th) { I.mode = 'throw'; $('hint').textContent = '左右ドラッグで位置　↑ スワイプで投げる（指を曲げるとカーブ）'; }
+    if (G.slot === th) { I.mode = 'throw'; $('hud').classList.add('throw'); $('hint').textContent = '左右ドラッグで位置　↑ スワイプで投げる（指を曲げるとカーブ）'; }
     else if (G.slot === df) { I.mode = 'dodge'; $('hint').textContent = '左がわをさわって動く（ピンにぶつかると倒れる）'; }
     else { I.mode = 'none'; $('hint').textContent = ''; }
     $('ph').textContent = G.slot === th ? 'ねらって投げる' : G.slot === df ? 'よける' : '観戦';
@@ -105,13 +112,15 @@
   // 投げる（自分か CPU）
   function doThrow(t) {
     if (G.thrown || G.phase !== 'aim') return;
+    if (t.bm === undefined) t.bm = G.bm || null;
+    G.placing = false; $('hud').classList.remove('throw'); $('bump-ui').classList.remove('on');
     G.thrown = true; I.mode = G.slot === defender(G.k) ? 'dodge' : 'none'; R.aim(0, 0, 0, 0, false); $('kbar').classList.remove('on');
     if (G.mode === 'net' && !isLocal(defender(G.k))) room.sendThrow(G.k, t);
     else launch(t);
   }
   function launch(t) {
     const df = defender(G.k), L = G.lanes[df];
-    G.thrown = true; L.throwBall(t); G.phase = 'roll'; G.pt = 0; G.lastT = t;
+    G.thrown = true; G.bm = t.bm || null; L.setBumper(G.bm); L.throwBall(t); G.phase = 'roll'; G.pt = 0; G.lastT = t;
     $('hud').classList.add('roll'); $('hint').textContent = G.slot === df ? 'よけろ！　青く光ったら止められる' : '';
     if (G.mode === 'net') room.sendState(L, 'roll', G.k, true);
   }
@@ -135,6 +144,7 @@
     G.pt += dt;
     const th = G.k >= 0 ? thrower(G.k) : -1, df = G.k >= 0 ? defender(G.k) : -1;
     // ---- ピンえらび ----
+    R.zones.visible = G.phase === 'pick';
     if (G.phase === 'pick') {
       R.draw(G.pickView, dt, { showMe: G.pickView.me >= 0, arrow: true });
       camPick();
@@ -156,8 +166,10 @@
         else if (isCpu(df)) [mx, mz] = G.dodger.think(L, dt);
       }
       L.setMove(mx, mz); G.moving = Math.hypot(mx, mz) > 0.15;
-      acc += dt; let n = 0; while (acc >= 1 / 60 && n < 3) { L.step(1 / 60); acc -= 1 / 60; n++; } if (n === 3) acc = 0;
+      const sl = G.pt < G.slowUntil ? 0.3 : 1; acc += dt * sl; let n = 0; while (acc >= 1 / 60 && n < 3) { L.step(1 / 60); acc -= 1 / 60; n++; } if (n === 3) acc = 0;
       G.views[df] = L.view();
+      // ニアミス：速い球が自分のピンのすぐ横を通る → スロー
+      if (G.phase === 'roll' && !G.slowNear && L.ball && !L.ballOut && !L.blown && !L.stoppable()) { const m = L.me.b.position, b = L.ball.position; if (Math.hypot(m.x - b.x, m.z - b.z) < 1.25 && b.z < m.z + 0.2) { G.slowNear = true; G.slowUntil = G.pt + 0.75; } }
       const evs = L.takeEv(); handleEv(evs, df); if (G.mode === 'net' && room) room.queueEv(evs);
       if (G.mode === 'net') room.sendState(L, G.phase, G.k);
     }
@@ -169,7 +181,7 @@
       if (G.slot === th) aimInput(dt);
       if (isCpu(th)) cpuAim(dt, v);
       if (G.slot === th && left <= 0 && !G.thrown) doThrow({ x: G.aimX, ang: 0, pow: 0.45, spin: 0 });
-      if (G.mode === 'net' && G.slot === th) room.sendAim(G.k, G.aimX, G.thrown);
+      if (G.mode === 'net' && G.slot === th) room.sendAim(G.k, G.aimX, G.thrown, G.bm);
     }
     if (G.phase === 'roll' && L) {
       const done = (L.ballOut && L.settled() && G.pt > 1.5) || G.pt > C.ROLL_T || (L.ballOut && G.pt > (L.blown ? 2.2 : 6));
@@ -184,6 +196,7 @@
     drawActive(dt);
     camera(dt, th, df, v);
     hudStep(v, th, df);
+    drawMini(isLocal(df) ? v : (smooth(df) || v), th, df);
   }
   function endRoll(L) {
     const df = defender(G.k);
@@ -213,7 +226,8 @@
     G.phase = 'end'; G.pt = 0; I.mode = 'none'; I.reset(); hideBanner(); PB.S.roll(0);
     $('hud').className = '';
     const r = G.remain; let win;
-    if (loser >= 0) win = 1 - loser; else win = r[0] === r[1] ? -1 : (r[0] > r[1] ? 0 : 1);
+    const tot = [score(0), score(1)];
+    if (loser >= 0) win = 1 - loser; else win = tot[0] === tot[1] ? -1 : (tot[0] > tot[1] ? 0 : 1);
     G.winner = win;
     if (G.mode === 'net' && room && G.slot === 0) room.finish();
     setTimeout(() => {
@@ -224,8 +238,8 @@
       else if (win < 0) t.textContent = 'ひきわけ';
       else if (win === me) { t.textContent = 'かち！'; t.classList.add('win'); S.win(); }
       else { t.textContent = 'まけ…'; S.lose(); }
-      $('res-why').textContent = loser >= 0 ? G.names[loser] + ' が球に当たってふっとんだ！' : 'のこったピンの数で勝負！';
-      for (const s of [0, 1]) $('rs' + s).innerHTML = `<div class="n" style="color:${PB.COLORS[G.looks[s].col].d}">${esc(G.names[s])}</div><div class="c">${loser === s ? 'ふっとび' : r[s]}<small>${loser === s ? '' : '本'}</small></div><div class="ls">${G.downs[s].map(d => '−' + d).join(' ')}</div>`;
+      $('res-why').textContent = loser >= 0 ? G.names[loser] + ' が球に当たってふっとんだ！' : 'のこったピン＋前列ボーナスで勝負！';
+      for (const s of [0, 1]) $('rs' + s).innerHTML = `<div class="n" style="color:${PB.COLORS[G.looks[s].col].d}">${esc(G.names[s])}</div><div class="c">${loser === s ? 'ふっとび' : tot[s]}<small>${loser === s ? '' : '点'}</small></div>${loser === s ? '' : `<div class="bo">のこり${r[s]}本${bonusOf(G.picks[s]) ? ' ＋ 前列ボーナス' + bonusOf(G.picks[s]) : ''}</div>`}<div class="ls">${G.downs[s].map(d => '−' + d).join(' ')}</div>`;
       $('res-note').textContent = '';
       $('btn-again').classList.toggle('hide', G.mode === 'net' && G.slot < 0);
       show('s-result');
@@ -240,9 +254,9 @@
     G.aimX = Math.max(-C.LANE_HW + 0.4, Math.min(C.LANE_HW - 0.4, G.aimX));
     if (G.charge >= 0) { G.charge += dt; const p = 1 - Math.abs(1 - (G.charge * 0.9) % 2); $('kbar-i').style.width = (p * 100) + '%'; G.kpow = p; }
     // ねらい線
-    if (swipeLive) R.aim(G.aimX, swipeLive.ang, swipeLive.spin, swipeLive.pow, true);
-    else if (G.charge >= 0) R.aim(G.aimX, 0, G.spinK, G.kpow || 0, true);
-    else R.aim(G.aimX, 0, G.spinK, 0.35, true);
+    if (swipeLive) R.aim(G.aimX, swipeLive.ang, swipeLive.spin, swipeLive.pow, true, G.bm);
+    else if (G.charge >= 0) R.aim(G.aimX, 0, G.spinK, G.kpow || 0, true, G.bm);
+    else R.aim(G.aimX, 0, G.spinK, 0.35, true, G.bm);
   }
   function mapSwipe(r) {
     if (!r) return null;
@@ -268,10 +282,40 @@
     if (code === 'KeyV' && G.slot === defender(G.k)) G.camMode ^= 1;
   };
   I.cb.keyUp = code => { if (code === 'Space' && G && G.charge >= 0 && G.phase === 'aim') { const p = G.kpow || 0; G.charge = -1; doThrow({ x: G.aimX, ang: 0, pow: p, spin: -G.spinK }); } };
+  // ---------- バンパーを置く ----------
+  I.cb.place = (x, y) => {
+    if (!G || !G.placing || !G.bm) return; const p = R.floorAt(x, y); if (!p) return;
+    G.bm.x = clamp(p.x, -C.LANE_HW + 0.5, C.LANE_HW - 0.5); G.bm.z = clamp(p.z, C.BUMP_Z0, C.BUMP_Z1);
+  };
+  function placeMode(on) {
+    if (!G || G.phase !== 'aim' || G.thrown || G.slot !== thrower(G.k)) return;
+    G.placing = on; I.mode = on ? 'place' : 'throw'; I.reset(); $('bump-ui').classList.toggle('on', on);
+    $('hint').textContent = on ? 'さわった場所にバンパー　↻で向きをかえる' : '左右ドラッグで位置　↑ スワイプで投げる（指を曲げるとカーブ）';
+    if (on) R.aim(0, 0, 0, 0, false);
+  }
+  // ---------- 小さな地図（上から） ----------
+  function drawMini(v, th, df) {
+    const show = v && (G.slot !== df) && (G.phase === 'aim' || G.phase === 'roll' || G.phase === 'intro');
+    $('hud').classList.toggle('mini', !!show); if (!show) return;
+    const cvs = $('mini'), g = cvs.getContext('2d'), W = cvs.width, H = cvs.height, z0 = 5, z1 = 30.5;
+    const X = x => W / 2 + x / (C.LANE_HW + 0.3) * (W / 2 - 4), Z = z => H - 4 - (z - z0) / (z1 - z0) * (H - 8);
+    g.clearRect(0, 0, W, H); g.fillStyle = 'rgba(214,170,120,.28)'; g.fillRect(X(-C.LANE_HW), Z(z1), X(C.LANE_HW) - X(-C.LANE_HW), Z(z0) - Z(z1));
+    const bm = (G.phase !== 'roll' && !G.thrown) ? G.bm : v.bm;
+    if (bm) { g.strokeStyle = '#ffd23a'; g.lineWidth = 4; g.beginPath(); const ux = Math.cos(bm.a) * C.BUMP_L / 2, uz = -Math.sin(bm.a) * C.BUMP_L / 2; g.moveTo(X(bm.x - ux), Z(bm.z - uz)); g.lineTo(X(bm.x + ux), Z(bm.z + uz)); g.stroke(); }
+    if (G.slot === th && G.phase === 'aim' && !G.thrown && !G.placing) {
+      const a = swipeLive || { ang: 0, spin: G.spinK, pow: G.charge >= 0 ? (G.kpow || 0) : 0.35 }, sp = C.POW_MIN + (C.POW_MAX - C.POW_MIN) * a.pow;
+      const P = PB.predict(G.aimX, 0.3, Math.sin(a.ang) * sp, Math.cos(a.ang) * sp, a.spin * C.SPIN_MAX, 2.6, [], G.bm);
+      g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(X(G.aimX), Z(0.3)); for (const p of P) g.lineTo(X(p[0]), Z(p[1])); g.stroke(); g.setLineDash([]);
+    }
+    g.fillStyle = '#fff'; v.pins.forEach((p, i) => { if (p && i !== v.me) g.fillRect(X(p[0]) - 1.5, Z(p[2]) - 1.5, 3, 3); });
+    const m = v.pins[v.me]; if (m) { g.fillStyle = PB.COLORS[G.looks[df].col].c; g.beginPath(); g.arc(X(m[0]), Z(m[2]), 5, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1.5; g.stroke(); }
+    const b = v.ball; if (b && !v.out) { g.fillStyle = v.stoppable ? '#4ac8ff' : '#ff4d6d'; g.beginPath(); g.arc(X(b[0]), Z(b[2]), 4, 0, Math.PI * 2); g.fill(); }
+    else if (G.phase === 'aim' && !G.thrown) { g.fillStyle = PB.COLORS[G.looks[th].col].c; g.beginPath(); g.arc(X(G.aimX), Z(z0 + 0.4), 4, 0, Math.PI * 2); g.fill(); }
+  }
   // ---------- CPU が投げる ----------
   function cpuAim(dt, v) {
     if (G.thrown) return;
-    if (!G.cpuPlan && G.pt > 0.6 && v) G.cpuPlan = PB.cpuThrow(v, G.lv);
+    if (!G.cpuPlan && G.pt > 0.6 && v) { G.cpuPlan = PB.cpuThrow(v, G.lv); G.bm = G.cpuPlan.bm || null; if (G.bm) G.cpuAt += 0.8; }
     if (G.cpuPlan) {
       G.aimX += (G.cpuPlan.x - G.aimX) * Math.min(1, dt * 2.5);
       if (G.pt > G.cpuAt && Math.abs(G.aimX - G.cpuPlan.x) < 0.1) doThrow(G.cpuPlan);
@@ -282,12 +326,14 @@
     const cx = R.cam.position.x;
     for (const e of evs) {
       const pan = e.x != null ? Math.max(-1, Math.min(1, -(e.x - cx) / 6)) : null;
-      if (e.k === 'pin') { S.pin(Math.min(1, e.v / 13), pan); R.burst(e.x, 0.5, e.z, 3, '#ffffff', 3); if (!G.firstCrash && e.v > 7) { G.firstCrash = true; S.crash(Math.min(1, e.v / 12)); R.shake = 0.18; } }
+      if (e.k === 'pin') { S.pin(Math.min(1, e.v / 13), pan); R.burst(e.x, 0.5, e.z, 3, '#ffffff', 3); if (!G.firstCrash && e.v > 7) { G.firstCrash = true; S.crash(Math.min(1, e.v / 12)); R.shake = 0.18; if (e.v > 8.5 && !G.slowCrash) { G.slowCrash = true; G.slowUntil = Math.max(G.slowUntil, G.pt + 0.5); } } }
       else if (e.k === 'pp') { if (Math.random() < 0.35) S.pin(Math.min(0.6, e.v / 10), pan); }
       else if (e.k === 'rail') { S.rail(Math.min(1, e.v / 12), pan); R.shake = Math.max(R.shake, 0.06); }
+      else if (e.k === 'bumper') { S.rail(Math.min(1, e.v / 12), pan); R.burst(e.x, 0.4, e.z, 8, '#ffd23a', 3); R.shake = Math.max(R.shake, 0.08); }
+      else if (e.k === 'self') { G.selfAcc++; if (G.pt - G.selfT > 0.5) { toast((G.slot === df ? 'じばく！' : 'あいてがじばく！') + ' −' + G.selfAcc); G.selfAcc = 0; G.selfT = G.pt; } }
       else if (e.k === 'bump') { S.bump(Math.min(1, e.v / 3), pan); }
       else if (e.k === 'stop') { S.stop(); R.burst(R.ball.position.x, 0.4, R.ball.position.z, 12, '#4ac8ff', 3); banner('ストップ！', 'blue', 1.2); G.stoppedSaid = true; }
-      else if (e.k === 'blown') { S.blown(); R.shake = 0.5; const m = G.views[df] && G.views[df].pins[G.views[df].me]; if (m) R.burst(m[0], 0.6, m[2], 20, '#ffd23a', 5); banner(G.slot === df ? 'ふっとび！<small>まけ…</small>' : esc(G.names[df]) + ' がふっとんだ！', 'yel', 2.6); }
+      else if (e.k === 'blown') { S.blown(); R.shake = 0.5; G.slowUntil = G.pt + 1.3; const m = G.views[df] && G.views[df].pins[G.views[df].me]; if (m) R.burst(m[0], 0.6, m[2], 20, '#ffd23a', 5); banner(G.slot === df ? 'ふっとび！<small>まけ…</small>' : esc(G.names[df]) + ' がふっとんだ！', 'yel', 2.6); }
       else if (e.k === 'throw') S.throw();
     }
   }
@@ -302,6 +348,7 @@
     else if (v.held) R.setFace('happy');
     else if (v.ball && !v.out && !v.stoppable) { const m = v.pins[v.me], b = v.ball; const d = m ? Math.hypot(m[0] - b[0], m[2] - b[2]) : 99; R.setFace(d < 6 ? 'scared' : 'me'); }
     else R.setFace('me');
+    R.setBumper((G.phase === 'aim' || G.phase === 'intro') && !G.thrown ? G.bm : (G.phase === 'roll' || G.phase === 'res' ? v.bm : null), G.placing);
     R.draw(v, dt, { showMe: true, arrow: me ? G.phase !== 'roll' : ((G.phase === 'aim' || G.phase === 'intro') ? 'far' : false), moving: G.moving, thrower: G.slot === thrower(G.k) });
     if (G.phase === 'aim' && !G.thrown && v) {
       // 投げる前の球（手前でかまえている）
@@ -329,6 +376,8 @@
   function camera(dt, th, df, v) {
     const port = innerWidth / innerHeight < 1, k = Math.min(1, dt * 4);
     R.zoom = (G.slot === th && (G.phase === 'intro' || (G.phase === 'aim' && !G.thrown))) ? (port ? 0.42 : 0.6) : 1;
+    if (G.placing) { R.zoom = 1; return R.camTo(V3(0, port ? 17 : 9.5, port ? 4 : 3.2), V3(0, 0, 12.2), k); }
+    if (G.pt < G.slowUntil) R.zoom *= 0.85;
     const b = v && v.ball, m = v && v.pins[v.me];
     if (G.phase === 'res' || (G.phase === 'roll' && v && v.blown)) {
       if (v && v.blown && m) return R.camTo(V3(m[0] * 0.3, Math.max(6, m[1] + 4) + (port ? 4 : 0), Math.min(m[2], C.PIT_Z - 2) - 10), V3(m[0], Math.max(0.5, m[1] * 0.8), Math.min(m[2], C.PIT_Z) + 1), k * 0.8);
@@ -404,7 +453,7 @@
       G.m = m.m;
     },
     onPick(s, i) { if (G && G.mode === 'net' && G.picks[s] == null) { G.picks[s] = i; if (s === G.my) G.pickView.me = i; } },
-    onAim(k, x) { if (G && G.k === k && !isLocal(thrower(k))) G.aimX = x; },
+    onAim(k, x, bm) { if (G && G.k === k && !isLocal(thrower(k)) && !G.thrown) { G.aimX = x; G.bm = bm; } },
     onThrow(k, t) {
       if (!G || G.mode !== 'net') return;
       if (isLocal(defender(k))) { if (G.k === k && G.phase === 'aim') launch(t); else if (G.k === k && G.phase === 'intro') G.pendingThrow = t; else if (G.k === k - 1 || (G.k === k && G.phase === 'pick')) G.pendingThrow = Object.assign({ k }, t); }
@@ -443,6 +492,10 @@
     $('btn-resume').onclick = () => togglePause();
     $('btn-quit').onclick = () => { if (G) G.paused = false; toTitle(); };
     $('btn-cam').onclick = () => { if (G) { G.camMode ^= 1; S.ui(); } };
+    $('btn-bump').onclick = () => { if (!G || G.thrown) return; S.ui(); if (!G.bm) G.bm = { x: 0, z: 11.5, a: 0.6 }; placeMode(true); };
+    $('btn-rot').onclick = () => { if (!G || !G.bm) return; S.ui(); G.bm.a = G.bm.a + 0.3 > 0.95 ? -0.9 : Math.round((G.bm.a + 0.3) * 10) / 10; };
+    $('btn-bdel').onclick = () => { if (!G) return; S.ui(); G.bm = null; placeMode(false); };
+    $('btn-bok').onclick = () => { if (!G) return; S.ui(); placeMode(false); };
     $('btn-auto').onclick = () => { if (G && G.phase === 'pick') choosePin(autoPick()); };
     $('btn-again').onclick = () => {
       S.ui();

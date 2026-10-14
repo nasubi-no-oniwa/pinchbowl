@@ -55,7 +55,7 @@
       for (const s of [0, 1]) {
         if (s === this.slot) continue;
         this.on(this.root.child('st/' + s), 'value', snap => { const v = snap.val(); if (v) { const d = Room.decode(v); if (d) this.call('onState', s, d); } });
-        this.on(this.root.child('aim/' + s), 'value', snap => { const v = snap.val(); if (!v || !this.game) return; const [m, k, x] = String(v).split(',').map(Number); if (m === this.game.m) this.call('onAim', k, x / 100); });
+        this.on(this.root.child('aim/' + s), 'value', snap => { const v = snap.val(); if (!v || !this.game) return; const [m, k, x, bx, bz, ba] = String(v).split(',').map(Number); if (m === this.game.m) this.call('onAim', k, x / 100, isNaN(bx) ? null : { x: bx / 100, z: bz / 100, a: ba / 100 }); });
       }
       if (this.slot >= 0) await this.root.child('ready/' + this.slot).set(this.joinM);
       return { slot: this.slot, code: this.code, watching: this.watching };
@@ -87,11 +87,11 @@
     }
     // ---- 送る ----
     sendPick(i) { if (this.slot < 0 || !this.game) return; this.root.child('pk/' + this.game.m + '/' + this.slot).set(i); }
-    sendAim(k, x, thrown) {
+    sendAim(k, x, thrown, bm) {
       if (this.slot < 0 || !this.game || thrown) return; const n = Date.now(); if (n - this.lastAim < 120) return;
-      const v = this.game.m + ',' + k + ',' + q(x); if (v === this.lastAimV) return; this.lastAim = n; this.lastAimV = v; this.root.child('aim/' + this.slot).set(v);
+      const v = this.game.m + ',' + k + ',' + q(x) + (bm ? ',' + q(bm.x) + ',' + q(bm.z) + ',' + q(bm.a) : ''); if (v === this.lastAimV) return; this.lastAim = n; this.lastAimV = v; this.root.child('aim/' + this.slot).set(v);
     }
-    sendThrow(k, t) { if (this.slot < 0 || !this.game) return; this.root.child('th/' + this.game.m + '/' + k).set({ x: Math.round(t.x * 1000) / 1000, ang: Math.round(t.ang * 10000) / 10000, pow: Math.round(t.pow * 1000) / 1000, spin: Math.round(t.spin * 1000) / 1000 }); }
+    sendThrow(k, t) { if (this.slot < 0 || !this.game) return; this.root.child('th/' + this.game.m + '/' + k).set({ x: Math.round(t.x * 1000) / 1000, ang: Math.round(t.ang * 10000) / 10000, pow: Math.round(t.pow * 1000) / 1000, spin: Math.round(t.spin * 1000) / 1000, bm: t.bm ? { x: Math.round(t.bm.x * 100) / 100, z: Math.round(t.bm.z * 100) / 100, a: Math.round(t.bm.a * 100) / 100 } : null }); }
     sendRes(r) { if (this.slot < 0 || !this.game) return; this.root.child('res/' + this.game.m + '/' + r.k).set({ n: r.n, down: r.down, blown: r.blown ? 1 : 0, stop: r.stop ? 1 : 0 }); }
     queueEv(evs) { for (const e of evs) if (e.k !== 'down' && e.k !== 'pp') this.evq.push(e); else if (e.k === 'pp' && Math.random() < 0.3) this.evq.push(e); if (this.evq.length > 12) this.evq.splice(0, this.evq.length - 12); }
     sendState(L, ph, k, force) {
@@ -114,7 +114,7 @@
       const b = v.ball ? v.ball.map(q).join(',') : '';
       const fl = (v.stoppable ? 1 : 0) | (v.held ? 2 : 0) | (v.blown ? 4 : 0) | (v.out ? 8 : 0);
       const ev = (evq || []).map(e => [e.k, q(e.v || 0), q(e.x || 0), q(e.z || 0)].join(',')).join(';');
-      return [m, k, ph, v.me, fl, q(v.bv), b, ev, pins].join('|');
+      return [m, k, ph, v.me, fl, q(v.bv), b, ev, pins, v.bm ? [q(v.bm.x), q(v.bm.z), q(v.bm.a)].join(',') : '', v.self | 0].join('|');
     }
     static decode(s) {
       try {
@@ -126,6 +126,7 @@
           ball: a[6] ? num(a[6]) : null,
           ev: a[7] ? a[7].split(';').map(t => { const [k, v, x, z] = t.split(','); return { k, v: +v / 100, x: +x / 100, z: +z / 100 }; }) : [],
           pins: a[8].split(';').map(t => (t ? num(t) : null)),
+          bm: a[9] ? (([x, z, an]) => ({ x, z, a: an }))(num(a[9])) : null, self: +(a[10] || 0),
         };
       } catch (e) { return null; }
     }

@@ -11,6 +11,7 @@
   const isUi = t => t && t.closest && t.closest('button,.ui,input,label,a');
   function down(id, x, y, target) {
     if (isUi(target)) return false;
+    if (I.mode === 'place') { gest = { id, place: true }; if (I.cb.place) I.cb.place(x, y); return true; }
     if (I.mode === 'dodge' || I.mode === 'pick') {
       if (I.mode === 'pick') { if (I.cb.tap) I.cb.tap(x, y); return true; }
       if (stickId === null) { stickId = id; sx0 = x; sy0 = y; const s = stickEl(); s.style.left = x + 'px'; s.style.top = y + 'px'; s.classList.add('on'); knobEl().style.transform = 'translate(-50%,-50%)'; }
@@ -25,6 +26,7 @@
       I.sx = dx / R; I.sy = dy / R; knobEl().style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
       return;
     }
+    if (gest && gest.place && id === gest.id) { if (I.cb.place) I.cb.place(x, y); return; }
     if (gest && id === gest.id) {
       const p = [x, y, performance.now()]; gest.pts.push(p);
       if (!gest.up) {
@@ -37,6 +39,7 @@
   }
   function up(id, x, y) {
     if (id === stickId) { stickId = null; I.sx = 0; I.sy = 0; const s = stickEl(); s && s.classList.remove('on'); return; }
+    if (gest && gest.place && id === gest.id) { gest = null; return; }
     if (gest && id === gest.id) {
       const g = gest; gest = null; if (x != null) g.pts.push([x, y, performance.now()]);
       const r = I.read(g); if (I.cb.swipeEnd) I.cb.swipeEnd(r);

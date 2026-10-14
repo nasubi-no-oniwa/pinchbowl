@@ -163,6 +163,23 @@
     // パーティクル（ピンのかけら・星）
     R.parts = []; R.partGeo = new T.SphereGeometry(0.04, 6, 4);
     R.mats = {};
+    // 投げる人が置くバンパー
+    const bstripe = cv(256, 32, (g, W, H) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#1a1a2e' : '#ffd23a'; g.fillRect(i * W / 8, 0, W / 8, H); } });
+    R.bump = new T.Group();
+    const bb = new T.Mesh(new T.BoxGeometry(C.BUMP_L, 0.8, 0.28), new T.MeshStandardMaterial({ map: bstripe, roughness: 0.45, transparent: true }));
+    bb.position.y = 0.4; bb.castShadow = true; R.bump.add(bb); R.bumpMat = bb.material;
+    const glow = new T.Mesh(new T.PlaneGeometry(C.BUMP_L + 0.6, 0.9), new T.MeshBasicMaterial({ color: '#ffd23a', transparent: true, opacity: 0.25, depthWrite: false, blending: T.AdditiveBlending }));
+    glow.rotation.x = -Math.PI / 2; glow.position.y = 0.01; R.bump.add(glow);
+    R.bump.visible = false; sc.add(R.bump);
+    // 前の列ボーナスの帯（ピンをえらぶときだけ）
+    R.zones = new T.Group(); const dzr = C.SP * Math.sqrt(3) / 2;
+    for (const [r0, r1, pt] of C.BONUS) {
+      const z0 = C.HEAD_Z + r0 * dzr - 0.4, z1 = C.HEAD_Z + r1 * dzr + 0.4;
+      const band = new T.Mesh(new T.PlaneGeometry(C.LANE_HW * 2, z1 - z0), new T.MeshBasicMaterial({ color: pt > 10 ? '#ff4fd8' : '#3af0ff', transparent: true, opacity: 0.16, depthWrite: false }));
+      band.rotation.x = -Math.PI / 2; band.position.set(0, 0.012, (z0 + z1) / 2); R.zones.add(band);
+      for (const sx of [-1, 1]) { const lab = new T.Sprite(new T.SpriteMaterial({ map: textTex('+' + pt, { color: '#fff', glow: pt > 10 ? '#ff4fd8' : '#3af0ff', fs: 130, w: 256, h: 192 }), transparent: true, depthTest: false })); lab.scale.set(1.9, 1.4, 1); lab.position.set(sx * (C.LANE_HW - 1.2), 0.8, (z0 + z1) / 2); lab.renderOrder = 6; R.zones.add(lab); }
+    }
+    R.zones.visible = false; sc.add(R.zones);
     window.addEventListener('resize', R.resize); R.resize();
     R.camT = { pos: new T.Vector3(0, 3, -4), look: new T.Vector3(0, 0, 10) }; R.camLook = new T.Vector3(0, 0, 10);
     R.shake = 0; R.dummy = new T.Object3D(); R.hidden = new T.Matrix4().makeScale(0, 0, 0);
@@ -295,19 +312,23 @@
     R.trail.geometry.attributes.position.needsUpdate = true; R.trail.visible = P.length > 1;
   };
   // ねらい線（投げる人だけ）
-  R.aim = function (x, ang, spin, pow, on) {
+  R.aim = function (x, ang, spin, pow, on, bm) {
     R.aimG.visible = !!on; if (!on) return;
-    let px = x, pz = 0.3, a = ang;
     const v = C.POW_MIN + (C.POW_MAX - C.POW_MIN) * pow;
-    for (let i = 0; i < R.aimDots.length; i++) {
-      const dd = R.aimDots[i]; dd.position.set(px, 0.02, pz);
-      for (let k = 0; k < 6; k++) { // 曲がりもそれっぽく
-        const h = 0.12; px += Math.sin(a) * h; pz += Math.cos(a) * h;
-        if (pz > 5) a += (spin * C.SPIN_MAX * Math.min(1, (pz - 5) / 4) / v) * h;
-        if (Math.abs(px) > C.LANE_HW - C.BALL_R) { px = Math.sign(px) * (C.LANE_HW - C.BALL_R); a = -a; }
-      }
-      dd.visible = i < 6 + pow * 20;
+    const P = PB.predict(x, 0.3, Math.sin(ang) * v, Math.cos(ang) * v, spin * C.SPIN_MAX, 3, R.aimPath || (R.aimPath = []), bm);
+    // 道のりにそって等間隔に点を置く（長さは強さで変わる）
+    const maxLen = 6 + pow * 14; let acc = 0, k = 0, px = x, pz = 0.3, next = 0;
+    for (const d of R.aimDots) d.visible = false;
+    for (const p of P) {
+      const l = Math.hypot(p[0] - px, p[1] - pz); acc += l; px = p[0]; pz = p[1];
+      if (acc > maxLen) break;
+      if (acc >= next && k < R.aimDots.length) { const d = R.aimDots[k++]; d.position.set(p[0], 0.02, p[1]); d.visible = true; next += 0.75; }
     }
+  };
+  R.floorAt = function (sx, sy) {
+    const v = new T.Vector3(sx / window.innerWidth * 2 - 1, -(sy / window.innerHeight) * 2 + 1, 0.5).unproject(R.cam);
+    const o = R.cam.position, d = v.sub(o).normalize(); if (d.y > -1e-3) return null;
+    const t = -o.y / d.y; return { x: o.x + d.x * t, z: o.z + d.z * t };
   };
   // ---------- かけら ----------
   R.burst = function (x, y, z, n, col, sp) {
@@ -334,6 +355,10 @@
     if (R.shake > 0) { c.position.x += (Math.random() - 0.5) * R.shake; c.position.y += (Math.random() - 0.5) * R.shake; R.shake *= 0.86; if (R.shake < 0.005) R.shake = 0; }
     const fw = R.baseFov * (R.zoom || 1); if (Math.abs(c.fov - fw) > 0.05) { c.fov += (fw - c.fov) * Math.max(f, 0.08); c.updateProjectionMatrix(); }
     c.lookAt(R.camLook); c.updateMatrixWorld();
+  };
+  R.setBumper = function (bm, ghost) {
+    R.bump.visible = !!bm; if (!bm) return;
+    R.bump.position.set(bm.x, 0, bm.z); R.bump.rotation.y = bm.a; R.bumpMat.opacity = ghost ? 0.55 : 1;
   };
   R.render = function () { R.ren.render(R.sc, R.cam); };
   // 画面上の位置（ピンをえらぶとき）
