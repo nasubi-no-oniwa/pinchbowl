@@ -335,8 +335,10 @@
       return camDeck(k * 0.5);
     }
     if (G.slot === df && m) {
-      if (G.camMode === 0) return R.camTo(V3(m[0] * 0.85, port ? 4.6 : 3.3, m[2] + (port ? 4.6 : 3.4)), V3(m[0] * 0.92, 0.3, m[2] - (port ? 4 : 5.5)), k);
-      return R.camTo(V3(m[0] * 0.6, port ? 15 : 10, m[2] + (port ? 3.5 : 2.6)), V3(m[0] * 0.6, 0, m[2] - 3.2), k);
+      // うしろの壁より奥にカメラが入らないように（入ると画面が暗くなる）。足りない分は高さでおぎなう
+      const zMax = C.PIT_Z - 0.8;
+      if (G.camMode === 0) { const want = m[2] + (port ? 4.6 : 3.4), cz = Math.min(want, zMax), e = want - cz; return R.camTo(V3(m[0] * 0.85, (port ? 4.6 : 3.3) + e * 1.6, cz), V3(m[0] * 0.92, 0.3, m[2] - (port ? 4 : 5.5) + e * 1.6), k); }
+      { const want = m[2] + (port ? 3.5 : 2.6), cz = Math.min(want, zMax); return R.camTo(V3(m[0] * 0.6, port ? 15 : 10, cz), V3(m[0] * 0.6, 0, m[2] - 3.2 - (want - cz)), k); }
     }
     // 投げる人・観戦
     if (G.phase === 'intro' || (G.phase === 'aim' && !G.thrown)) {

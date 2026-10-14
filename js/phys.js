@@ -23,7 +23,7 @@
     for (let i = 0; i < RING; i++) { const a = i / RING * Math.PI * 2 + Math.PI / 4; b.addShape(new K.Sphere(RING_S), new K.Vec3(Math.cos(a) * RING_R, RING_S - CM, Math.sin(a) * RING_R)); }
   }
   const UP = new K.Vec3(0, 1, 0), tmp = new K.Vec3(), tmp2 = new K.Vec3();
-  const G_FLOOR = 1, G_RAIL = 2, G_BALL = 4, G_PIN = 8;
+  const G_FLOOR = 1, G_RAIL = 2, G_BALL = 4, G_PIN = 8, G_DOWN = 16;
   class Lane {
     constructor(opt = {}) {
       this.opt = opt;
@@ -45,7 +45,7 @@
       this.pins = []; const L = PB.layout();
       this.meIdx = opt.me != null ? opt.me : 50;
       L.forEach(([x, z, row], i) => {
-        const b = new K.Body({ mass: C.PIN_M, material: mPin, linearDamping: 0.05, angularDamping: 0.12, collisionFilterGroup: G_PIN, collisionFilterMask: G_FLOOR | G_RAIL | G_PIN });
+        const b = new K.Body({ mass: C.PIN_M, material: mPin, linearDamping: 0.05, angularDamping: 0.12, collisionFilterGroup: G_PIN, collisionFilterMask: G_FLOOR | G_RAIL | G_PIN | G_DOWN });
         pinShape(b); b.position.set(x, CM, z); b.allowSleep = true; b.sleepSpeedLimit = 0.08; b.sleepTimeLimit = 0.25;
         b.pid = i; w.addBody(b); b.sleep();
         this.pins.push({ b, i, row, gone: false, down: false, hitT: -1, lastHit: -9 });
@@ -57,8 +57,8 @@
     }
     setMe(i) {
       const old = this.pins[this.meIdx];
-      if (old && old.b.isMe) { old.b.isMe = false; old.b.material = this.mat.mPin; old.b.fixedRotation = false; old.b.updateMassProperties(); old.b.allowSleep = true; }
-      this.meIdx = i; const p = this.pins[i]; p.b.isMe = true; p.b.material = this.mat.mMe; p.b.fixedRotation = true; p.b.quaternion.set(0, 0, 0, 1); p.b.angularVelocity.set(0, 0, 0); p.b.updateMassProperties(); p.b.allowSleep = false; p.b.wakeUp();
+      if (old && old.b.isMe) { old.b.isMe = false; old.b.material = this.mat.mPin; old.b.collisionFilterMask = G_FLOOR | G_RAIL | G_PIN | G_DOWN; old.b.fixedRotation = false; old.b.updateMassProperties(); old.b.allowSleep = true; }
+      this.meIdx = i; const p = this.pins[i]; p.b.isMe = true; p.b.material = this.mat.mMe; p.b.collisionFilterMask = G_FLOOR | G_RAIL | G_PIN; p.b.fixedRotation = true; p.b.quaternion.set(0, 0, 0, 1); p.b.angularVelocity.set(0, 0, 0); p.b.updateMassProperties(); p.b.allowSleep = false; p.b.wakeUp();
       this.me = p;
     }
     // ---- 球を投げる ----  x：投げる位置 ang：向き（0がまっすぐ、＋は右） pow：速さ0〜1 spin：-1〜1
@@ -131,7 +131,7 @@
     }
     blow(v) {
       this.blown = true; this.ev.push({ k: 'blown', v });
-      const m = this.me.b, bv = this.ball.velocity; m.fixedRotation = false; m.updateMassProperties();
+      const m = this.me.b, bv = this.ball.velocity; m.fixedRotation = false; m.collisionFilterMask = G_FLOOR | G_RAIL | G_PIN | G_DOWN; m.updateMassProperties();
       m.velocity.set(bv.x * 0.5 + (this.rnd() - 0.5) * 3, 10 + v * 0.25, bv.z * 0.5); m.angularVelocity.set((this.rnd() - 0.5) * 30, (this.rnd() - 0.5) * 10, (this.rnd() - 0.5) * 30); m.allowSleep = false;
     }
     setMove(x, z) { this.moveX = x; this.moveZ = z; }
@@ -155,6 +155,19 @@
         if (m.position.z < zmin) { m.position.z = zmin; m.velocity.z = Math.max(0, m.velocity.z); }
         if (m.position.z > zmax) { m.position.z = zmax; m.velocity.z = Math.min(0, m.velocity.z); }
         m.quaternion.set(0, 0, 0, 1);
+        // 倒れたピンには引っかからない：近くの寝ているピンを、そっと横へよける
+        const mv = Math.hypot(m.velocity.x, m.velocity.z);
+        for (const p of this.pins) {
+          if (!p.down || p.gone) continue; const q = p.b.position;
+          const dx = q.x - m.position.x, dz = q.z - m.position.z; if (dx * dx + dz * dz > 0.36) continue;
+          p.b.quaternion.vmult(UP, tmp); const hx = tmp.x, hz = tmp.z, hl = Math.hypot(hx, hz) || 1;
+          // ピンの軸（寝ている向き）でいちばん近い点からの距離
+          const u = Math.max(-0.5, Math.min(0.5, (-(dx) * hx - (dz) * hz) / hl));
+          const cx = dx + hx / hl * u, cz = dz + hz / hl * u, d = Math.hypot(cx, cz);
+          if (d > 0.3 || mv < 0.2) continue;
+          const nx = cx / (d || 1), nz = cz / (d || 1), push = (0.3 - d) * 6 + mv * 0.25;
+          p.b.wakeUp(); p.b.velocity.x += nx * push * h * 8; p.b.velocity.z += nz * push * h * 8;
+        }
       }
       // 球：曲がる（ゆかの油がうすくなる 6m あたりから）
       const b = this.ball;
@@ -177,7 +190,7 @@
         if (p.gone) continue;
         const pb = p.b;
         if (!pb.isMe && (pb.position.z > C.PIT_Z + 0.5 || pb.position.y < -3 || Math.abs(pb.position.x) > C.LANE_HW + 3)) { p.gone = true; p.down = true; this.w.removeBody(pb); continue; }
-        if (!p.down && !pb.isMe) { pb.quaternion.vmult(UP, tmp); if (tmp.y < 0.6) { p.down = true; this.ev.push({ k: 'down', i: p.i }); } }
+        if (!p.down && !pb.isMe) { pb.quaternion.vmult(UP, tmp); if (tmp.y < 0.6) { p.down = true; pb.collisionFilterGroup = G_DOWN; this.ev.push({ k: 'down', i: p.i }); } }
       }
     }
     standing() { let n = 0; for (const p of this.pins) if (!p.gone && !p.down && !(p.b.isMe && this.blown)) n++; return n; }
