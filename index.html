@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>ピンチボウル</title>
+<meta name="description" content="ボウリングのピンになって、球をよけろ！ 投げる番とよける番を交代する1対1。ピンがたくさん残った方が勝ち。">
+<meta name="theme-color" content="#160b26">
+<meta property="og:title" content="ピンチボウル">
+<meta property="og:description" content="ボウリングのピンになって、球をよけろ！ 1対1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="view"></div>
+
+<!-- タイトル -->
+<div class="screen active" id="s-title">
+  <div class="title-box">
+    <div class="tcol">
+      <div class="logo"><span class="l1">ピンチ</span><span class="l2">ボウル</span></div>
+      <div class="sub">ピンになって、球をよけろ！ <b>1対1</b></div>
+      <div class="sel"><div class="lbl">いろ</div><div class="row" id="col-row"></div></div>
+      <div class="sel"><div class="lbl">かざり</div><div class="row" id="hat-row"></div></div>
+    </div>
+    <div class="tcol">
+      <div class="lbl">CPUとたいせん</div>
+      <div class="lv-row">
+        <button class="btn lv" data-lv="easy">かんたん</button>
+        <button class="btn lv hot" data-lv="normal">ふつう</button>
+        <button class="btn lv" data-lv="hard">むずかしい</button>
+      </div>
+      <button class="btn on-btn" id="btn-online">あいことば対戦</button>
+      <div class="row2">
+        <button class="btn sm" id="btn-howto">あそびかた</button>
+        <button class="btn sm" id="btn-snd">音：<span id="snd-name">あり</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- あいことば対戦 -->
+<div class="screen" id="s-online">
+  <div class="title-box">
+    <div class="card on-card">
+      <h2>あいことば対戦</h2>
+      <div id="on-form">
+        <p class="note">同じ「あいことば」を入れた人と1対1。3人目からは観戦になります。</p>
+        <label class="fld">なまえ<input id="in-name" maxlength="8" placeholder="8文字まで"></label>
+        <label class="fld">あいことば<input id="in-code" maxlength="20" placeholder="例：ストライク"></label>
+        <button class="btn hot" id="btn-join">入る</button>
+      </div>
+      <div id="on-wait" class="hide">
+        <p class="big-note" id="on-msg">あいてを待っています…</p>
+        <p class="note" id="on-people"></p>
+      </div>
+      <p class="err" id="on-err"></p>
+      <button class="btn sm" id="btn-on-back">もどる</button>
+    </div>
+  </div>
+</div>
+
+<!-- あそびかた -->
+<div class="screen" id="s-howto">
+  <div class="title-box">
+    <div class="card how">
+      <h2>あそびかた</h2>
+      <ol>
+        <li><b>100本のピンのうち、1本があなた。</b>はじめに自分になるピンをえらびます。</li>
+        <li>「投げる番」と「よける番」を<b>3回ずつ</b>交代。最後に<b>ピンがたくさん残っていた方が勝ち</b>。</li>
+        <li><b>よける番：</b>左がわをさわってスティックで動く（ジャンプはできない）。動いてほかのピンにぶつかると、そのピンも倒れてしまう。</li>
+        <li>ピンにたくさん当たって<b class="blue">青く光った球</b>は、ぶつかれば<b>止められる</b>。<b class="red">赤い球</b>に当たると<b>ふっとんで、その場で負け！</b></li>
+        <li><b>投げる番：</b>左右にドラッグで位置、<b>上にスワイプ</b>で投げる。速くスワイプすると速い球、指を曲げるとカーブ。横のガードレールで<b>はね返り</b>もねらえます。</li>
+      </ol>
+      <p class="note">PC：よける＝WASD／矢印　投げる＝マウスでスワイプ（キーボードなら ←→で位置、Q/Eでカーブ、スペース長押しで投げる）</p>
+      <p class="credit">素材：Kenney「Impact Sounds」（CC0）　音楽：自作</p>
+      <button class="btn" id="btn-how-back">もどる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 試合の表示 -->
+<div id="hud" class="hide">
+  <div class="topbar">
+    <div class="pl" id="pl0"><i class="dot"></i><span class="nm"></span><b class="cnt">100</b></div>
+    <div class="mid"><div class="tn" id="tn"></div><div class="ph" id="ph"></div><div class="tbar"><i id="tbar"></i></div></div>
+    <div class="pl r" id="pl1"><b class="cnt">100</b><span class="nm"></span><i class="dot"></i></div>
+  </div>
+  <button class="btn ic ui" id="btn-pause">Ⅱ</button>
+  <button class="btn ic ui" id="btn-cam">視点</button>
+  <div class="hint" id="hint"></div>
+  <div class="banner" id="banner"></div>
+  <div class="spd" id="spd"><b id="spd-v"></b><span>はやさ</span></div>
+  <div class="kbar ui" id="kbar"><i id="kbar-i"></i></div>
+  <button class="btn sm ui" id="btn-auto">おまかせ</button>
+  <div class="watch-tag" id="watch-tag">観戦中</div>
+</div>
+<div id="stick"><div id="knob"></div></div>
+
+<!-- 一時停止 -->
+<div class="screen" id="s-pause">
+  <div class="title-box"><div class="card"><h2>ひと休み</h2>
+    <button class="btn hot" id="btn-resume">つづける</button>
+    <button class="btn" id="btn-quit">タイトルへ</button>
+  </div></div>
+</div>
+
+<!-- 結果 -->
+<div class="screen" id="s-result">
+  <div class="title-box"><div class="card res">
+    <div class="res-t" id="res-t"></div>
+    <div class="res-why" id="res-why"></div>
+    <div class="res-sc"><div class="rs" id="rs0"></div><div class="vs">VS</div><div class="rs" id="rs1"></div></div>
+    <div class="row2">
+      <button class="btn hot" id="btn-again">もう一回</button>
+      <button class="btn" id="btn-title">タイトルへ</button>
+    </div>
+    <p class="note" id="res-note"></p>
+  </div></div>
+</div>
+
+<div class="loading" id="loading">よみこみ中…</div>
+
+<script src="lib/three.min.js"></script>
+<script src="lib/cannon.min.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/config.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/phys.js"></script>
+<script src="js/cpu.js"></script>
+<script src="js/render.js"></script>
+<script src="js/input.js"></script>
+<script src="js/online.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

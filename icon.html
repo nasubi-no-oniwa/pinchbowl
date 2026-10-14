@@ -1,0 +1,42 @@
+<!doctype html><html><body style="margin:0;background:#000">
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+// アイコン（この画面をそのまま画像にする）
+const c=document.getElementById('c'), g=c.getContext('2d');
+const bg=g.createRadialGradient(256,230,40,256,256,360); bg.addColorStop(0,'#4a1f7a'); bg.addColorStop(1,'#12071f'); g.fillStyle=bg; g.fillRect(0,0,512,512);
+// ネオンの輪
+g.save(); g.shadowColor='#ff4fd8'; g.shadowBlur=30; g.strokeStyle='#ff8ae6'; g.lineWidth=14; g.beginPath(); g.arc(256,262,196,0,Math.PI*2); g.stroke(); g.restore();
+// ゆか
+g.fillStyle='rgba(255,190,120,.18)'; g.beginPath(); g.ellipse(256,420,170,30,0,0,Math.PI*2); g.fill();
+// ピン
+function pin(x,y,s,rot,body,stripe,face){
+  g.save(); g.translate(x,y); g.rotate(rot); g.scale(s,s);
+  const P=[[0,0],[34,0],[44,-30],[60,-100],[78,-190],[70,-260],[50,-320],[34,-360],[32,-390],[40,-420],[46,-460],[40,-500],[24,-525],[0,-532]];
+  g.beginPath();
+  const Q=P.concat(P.slice().reverse().map(p=>[-p[0],p[1]]));
+  g.moveTo(Q[0][0],Q[0][1]); for(let i=1;i<Q.length-1;i++){ const mx=(Q[i][0]+Q[i+1][0])/2, my=(Q[i][1]+Q[i+1][1])/2; g.quadraticCurveTo(Q[i][0],Q[i][1],mx,my); } g.lineTo(Q[Q.length-1][0],Q[Q.length-1][1]);
+  g.closePath();
+  const gr=g.createLinearGradient(-80,0,80,0); gr.addColorStop(0,body[0]); gr.addColorStop(.45,body[1]); gr.addColorStop(1,body[0]); g.fillStyle=gr; g.fill();
+  g.lineWidth=6; g.strokeStyle='rgba(40,10,60,.55)'; g.stroke();
+  g.save(); g.clip(); g.fillStyle=stripe; g.fillRect(-90,-372,180,16); g.fillRect(-90,-402,180,12); g.restore();
+  if(face){
+    g.fillStyle='#231815'; for(const dx of [-17,17]){ g.beginPath(); g.ellipse(dx,-462,10,15,0,0,Math.PI*2); g.fill(); }
+    g.fillStyle='#fff'; for(const dx of [-17,17]){ g.beginPath(); g.arc(dx-3,-467,4.5,0,Math.PI*2); g.fill(); }
+    g.fillStyle='#3a1a1a'; g.beginPath(); g.ellipse(0,-437,7,9,0,0,Math.PI*2); g.fill();
+    g.fillStyle='rgba(255,110,140,.6)'; for(const dx of [-31,31]){ g.beginPath(); g.ellipse(dx,-444,8,5,0,0,Math.PI*2); g.fill(); }
+  }
+  g.restore();
+}
+pin(110,428,0.52,-0.12,['#d9d2c8','#ffffff'],'#d81e2c',false);
+pin(410,428,0.52,0.14,['#d9d2c8','#ffffff'],'#d81e2c',false);
+pin(250,440,0.72,0.05,['#ff8fb0','#ffd2e0'],'#b3123a',true);
+// 球
+g.save(); g.shadowColor='#3af0ff'; g.shadowBlur=24;
+const bx=372,by=380,br=62; const bg2=g.createRadialGradient(bx-22,by-24,6,bx,by,br); bg2.addColorStop(0,'#9ff7ff'); bg2.addColorStop(.5,'#1a8fd0'); bg2.addColorStop(1,'#0a2a6a');
+g.fillStyle=bg2; g.beginPath(); g.arc(bx,by,br,0,Math.PI*2); g.fill(); g.restore();
+g.fillStyle='#0a1530'; for(const [dx,dy,r] of [[-14,-20,8],[6,-24,8],[-2,0,10]]){ g.beginPath(); g.arc(bx+dx,by+dy,r,0,Math.PI*2); g.fill(); }
+// あせ
+g.fillStyle='#bff1ff'; g.beginPath(); g.ellipse(318,108,9,15,0.3,0,Math.PI*2); g.fill();
+// スピード線
+g.strokeStyle='rgba(158,240,255,.7)'; g.lineWidth=7; g.lineCap='round'; for(const [y,l] of [[350,60],[384,80],[418,55]]){ g.beginPath(); g.moveTo(452,y); g.lineTo(452+l,y+6); g.stroke(); }
+</script></body></html>
