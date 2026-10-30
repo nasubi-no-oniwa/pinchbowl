@@ -32,23 +32,24 @@
 <div class="screen active" id="s-title">
   <div class="title-box">
     <div class="tcol">
-      <div class="logo"><span class="l1">ピンチ</span><span class="l2">ボウル</span></div>
-      <div class="sub">ピンになって、球をよけろ！ <b>1対1</b></div>
-      <div class="sel"><div class="lbl">いろ</div><div class="row" id="col-row"></div></div>
-      <div class="sel"><div class="lbl">かざり</div><div class="row" id="hat-row"></div></div>
+      <div class="logo"><span class="l1" data-i="l1">ピンチ</span><span class="l2" data-i="l2">ボウル</span></div>
+      <div class="sub" data-ih="sub">ピンになって、球をよけろ！ <b>1対1</b></div>
+      <div class="sel"><div class="lbl" data-i="color">いろ</div><div class="row" id="col-row"></div></div>
+      <div class="sel"><div class="lbl" data-i="deco">かざり</div><div class="row" id="hat-row"></div></div>
     </div>
     <div class="tcol">
-      <div class="lbl">CPUとたいせん</div>
+      <div class="lbl" data-i="vs_cpu">CPUとたいせん</div>
       <div class="lv-row">
-        <button class="btn lv" data-lv="easy">かんたん</button>
-        <button class="btn lv hot" data-lv="normal">ふつう</button>
-        <button class="btn lv" data-lv="hard">むずかしい</button>
+        <button class="btn lv" data-lv="easy" data-i="lv_easy">かんたん</button>
+        <button class="btn lv hot" data-lv="normal" data-i="lv_normal">ふつう</button>
+        <button class="btn lv" data-lv="hard" data-i="lv_hard">むずかしい</button>
       </div>
-      <button class="btn on-btn" id="btn-online">あいことば対戦</button>
+      <button class="btn on-btn" id="btn-online" data-i="online2">あいことば対戦</button>
       <div class="row2">
-        <button class="btn sm" id="btn-howto">あそびかた</button>
-        <button class="btn sm" id="btn-snd">音：<span id="snd-name">あり</span></button>
+        <button class="btn sm" id="btn-howto" data-i="howto">あそびかた</button>
+        <button class="btn sm" id="btn-snd"><span data-i="snd">音：</span><span id="snd-name">あり</span></button>
       </div>
+      <div class="langs" role="group" aria-label="Language"><button type="button" data-lang="ja">日本語</button><button type="button" data-lang="en">English</button><button type="button" data-lang="zh">繁中</button><button type="button" data-lang="ko">한국어</button></div>
     </div>
   </div>
 </div>
@@ -57,19 +58,19 @@
 <div class="screen" id="s-online">
   <div class="title-box">
     <div class="card on-card">
-      <h2>あいことば対戦</h2>
+      <h2 data-i="online2">あいことば対戦</h2>
       <div id="on-form">
-        <p class="note">同じ「あいことば」を入れた人と1対1。3人目からは観戦になります。</p>
-        <label class="fld">なまえ<input id="in-name" maxlength="8" placeholder="8文字まで"></label>
-        <label class="fld">あいことば<input id="in-code" maxlength="20" placeholder="例：ストライク"></label>
-        <button class="btn hot" id="btn-join">入る</button>
+        <p class="note" data-i="on_note">同じ「あいことば」を入れた人と1対1。3人目からは観戦になります。</p>
+        <label class="fld"><span data-i="name">なまえ</span><input id="in-name" maxlength="8" placeholder="8文字まで" data-ip="ph_name"></label>
+        <label class="fld"><span data-i="passcode">あいことば</span><input id="in-code" maxlength="20" placeholder="例：ストライク" data-ip="ex_code"></label>
+        <button class="btn hot" id="btn-join" data-i="join2">入る</button>
       </div>
       <div id="on-wait" class="hide">
-        <p class="big-note" id="on-msg">あいてを待っています…</p>
+        <p class="big-note" id="on-msg" data-i="waiting">あいてを待っています…</p>
         <p class="note" id="on-people"></p>
       </div>
       <p class="err" id="on-err"></p>
-      <button class="btn sm" id="btn-on-back">もどる</button>
+      <button class="btn sm" id="btn-on-back" data-i="back">もどる</button>
     </div>
   </div>
 </div>
@@ -78,18 +79,18 @@
 <div class="screen" id="s-howto">
   <div class="title-box">
     <div class="card how">
-      <h2>あそびかた</h2>
+      <h2 data-i="howto">あそびかた</h2>
       <ol>
-        <li><b>100本のピンのうち、1本があなた。</b>はじめに自分になるピンをえらびます。</li>
-        <li>「投げる番」と「よける番」を<b>3回ずつ</b>交代。最後に<b>ピンがたくさん残っていた方が勝ち</b>。</li>
-        <li><b>よける番：</b>左がわをさわってスティックで動く（ジャンプはできない）。動いてほかのピンにぶつかると、そのピンも倒れてしまう。</li>
-        <li>ピンにたくさん当たって<b class="blue">青く光った球</b>は、ぶつかれば<b>止められる</b>。<b class="red">赤い球</b>に当たると<b>ふっとんで、その場で負け！</b></li>
-        <li><b>前の方のピンをえらぶとボーナス</b>（前から5列：＋15本、6〜10列：＋8本）。最後まで生き残ったら足されます。</li>
-        <li><b>投げる番：</b>左右にドラッグで位置、<b>上にスワイプ</b>で投げる。速くスワイプすると速い球、指を曲げるとカーブ。横のガードレールで<b>はね返り</b>もねらえます。「＋バンパー」で、1投に1本<b>はね返り用のバンパー</b>を好きな場所・向きに置けます（相手にも見えます）。</li>
+        <li data-ih="h1"><b>100本のピンのうち、1本があなた。</b>はじめに自分になるピンをえらびます。</li>
+        <li data-ih="h2">「投げる番」と「よける番」を<b>3回ずつ</b>交代。最後に<b>ピンがたくさん残っていた方が勝ち</b>。</li>
+        <li data-ih="h3"><b>よける番：</b>左がわをさわってスティックで動く（ジャンプはできない）。動いてほかのピンにぶつかると、そのピンも倒れてしまう。</li>
+        <li data-ih="h4">ピンにたくさん当たって<b class="blue">青く光った球</b>は、ぶつかれば<b>止められる</b>。<b class="red">赤い球</b>に当たると<b>ふっとんで、その場で負け！</b></li>
+        <li data-ih="h5"><b>前の方のピンをえらぶとボーナス</b>（前から5列：＋15本、6〜10列：＋8本）。最後まで生き残ったら足されます。</li>
+        <li data-ih="h6"><b>投げる番：</b>左右にドラッグで位置、<b>上にスワイプ</b>で投げる。速くスワイプすると速い球、指を曲げるとカーブ。横のガードレールで<b>はね返り</b>もねらえます。「＋バンパー」で、1投に1本<b>はね返り用のバンパー</b>を好きな場所・向きに置けます（相手にも見えます）。</li>
       </ol>
-      <p class="note">PC：よける＝WASD／矢印　投げる＝マウスでスワイプ（キーボードなら ←→で位置、Q/Eでカーブ、スペース長押しで投げる）</p>
-      <p class="credit">素材：Kenney「Impact Sounds」（CC0）　音楽：自作</p>
-      <button class="btn" id="btn-how-back">もどる</button>
+      <p class="note" data-i="pc_note">PC：よける＝WASD／矢印　投げる＝マウスでスワイプ（キーボードなら ←→で位置、Q/Eでカーブ、スペース長押しで投げる）</p>
+      <p class="credit" data-i="credit">素材：Kenney「Impact Sounds」（CC0）　音楽：自作</p>
+      <button class="btn" id="btn-how-back" data-i="back">もどる</button>
     </div>
   </div>
 </div>
@@ -102,17 +103,17 @@
     <div class="pl r" id="pl1"><em class="bn"></em><b class="cnt">100</b><span class="nm"></span><i class="dot"></i></div>
   </div>
   <button class="btn ic ui" id="btn-pause">Ⅱ</button>
-  <button class="btn ic ui" id="btn-cam">視点</button>
+  <button class="btn ic ui" id="btn-cam" data-i="cam">視点</button>
   <div class="hint" id="hint"></div>
   <div class="banner" id="banner"></div>
-  <div class="spd" id="spd"><b id="spd-v"></b><span>はやさ</span></div>
+  <div class="spd" id="spd"><b id="spd-v"></b><span data-i="speed">はやさ</span></div>
   <div class="kbar ui" id="kbar"><i id="kbar-i"></i></div>
-  <button class="btn sm ui" id="btn-auto">おまかせ</button>
-  <div class="watch-tag" id="watch-tag">観戦中</div>
+  <button class="btn sm ui" id="btn-auto" data-i="auto">おまかせ</button>
+  <div class="watch-tag" id="watch-tag" data-i="watching">観戦中</div>
   <canvas id="mini" width="120" height="200"></canvas>
   <div class="bump-ui ui" id="bump-ui">
-    <button class="btn sm" id="btn-bump">＋ バンパー</button>
-    <div class="bump-edit" id="bump-edit"><button class="btn sm" id="btn-rot">↻ まわす</button><button class="btn sm" id="btn-bdel">とる</button><button class="btn sm hot" id="btn-bok">OK</button></div>
+    <button class="btn sm" id="btn-bump" data-i="bumper">＋ バンパー</button>
+    <div class="bump-edit" id="bump-edit"><button class="btn sm" id="btn-rot" data-i="rot">↻ まわす</button><button class="btn sm" id="btn-bdel" data-i="bdel">とる</button><button class="btn sm hot" id="btn-bok">OK</button></div>
   </div>
   <div class="toasts" id="toasts"></div>
 </div>
@@ -120,9 +121,9 @@
 
 <!-- 一時停止 -->
 <div class="screen" id="s-pause">
-  <div class="title-box"><div class="card"><h2>ひと休み</h2>
-    <button class="btn hot" id="btn-resume">つづける</button>
-    <button class="btn" id="btn-quit">タイトルへ</button>
+  <div class="title-box"><div class="card"><h2 data-i="pause_t">ひと休み</h2>
+    <button class="btn hot" id="btn-resume" data-i="resume">つづける</button>
+    <button class="btn" id="btn-quit" data-i="to_title">タイトルへ</button>
   </div></div>
 </div>
 
@@ -133,15 +134,16 @@
     <div class="res-why" id="res-why"></div>
     <div class="res-sc"><div class="rs" id="rs0"></div><div class="vs">VS</div><div class="rs" id="rs1"></div></div>
     <div class="row2">
-      <button class="btn hot" id="btn-again">もう一回</button>
-      <button class="btn" id="btn-title">タイトルへ</button>
+      <button class="btn hot" id="btn-again" data-i="again">もう一回</button>
+      <button class="btn" id="btn-title" data-i="to_title">タイトルへ</button>
     </div>
     <p class="note" id="res-note"></p>
   </div></div>
 </div>
 
-<div class="loading" id="loading">よみこみ中…</div>
+<div class="loading" id="loading" data-i="loading">よみこみ中…</div>
 
+<script src="js/i18n.js"></script>
 <script src="lib/three.min.js"></script>
 <script src="lib/cannon.min.js"></script>
 <script src="js/firebase-config.js"></script>

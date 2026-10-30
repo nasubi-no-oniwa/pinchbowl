@@ -9,12 +9,12 @@
   const lo = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
   R.lo = lo;
   PB.COLORS = [
-    { name: 'あか', c: '#ff4d6d', d: '#b3123a' }, { name: 'あお', c: '#3aa0ff', d: '#1554a8' }, { name: 'みどり', c: '#3ad17a', d: '#13804a' },
-    { name: 'きいろ', c: '#ffc93a', d: '#b7820a' }, { name: 'むらさき', c: '#a76bff', d: '#5b2bb0' }, { name: 'ピンク', c: '#ff7ad9', d: '#b52a8c' },
+    { name: 'col0', c: '#ff4d6d', d: '#b3123a' }, { name: 'col1', c: '#3aa0ff', d: '#1554a8' }, { name: 'col2', c: '#3ad17a', d: '#13804a' },
+    { name: 'col3', c: '#ffc93a', d: '#b7820a' }, { name: 'col4', c: '#a76bff', d: '#5b2bb0' }, { name: 'col5', c: '#ff7ad9', d: '#b52a8c' },
   ];
   PB.HATS = [
-    { k: 'party', name: 'パーティ' }, { k: 'ribbon', name: 'リボン' }, { k: 'crown', name: 'おうかん' },
-    { k: 'cap', name: 'ぼうし' }, { k: 'glasses', name: 'めがね' }, { k: 'band', name: 'はちまき' },
+    { k: 'party', name: 'hat0' }, { k: 'ribbon', name: 'hat1' }, { k: 'crown', name: 'hat2' },
+    { k: 'cap', name: 'hat3' }, { k: 'glasses', name: 'hat4' }, { k: 'band', name: 'hat5' },
   ];
   // ---------- テクスチャ ----------
   function cv(w, h, f) { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), w, h); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; return t; }
@@ -82,8 +82,8 @@
   function textTex(txt, opt = {}) {
     const fs = opt.fs || 96, W = opt.w || 1024, H = opt.h || 192;
     return cv(W, H, (g) => {
-      g.font = `${opt.weight || 900} ${fs}px "Dela Gothic One","M PLUS Rounded 1c",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-      if (opt.glow) { g.shadowColor = opt.glow; g.shadowBlur = fs * 0.35; }
+      g.font = `${opt.weight || 900} ${fs}px "Dela Gothic One","Black Han Sans","M PLUS Rounded 1c",sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      if (opt.glow) { g.shadowColor = opt.glow; g.shadowBlur = fs * (opt.glowK || 0.35); }
       g.lineWidth = fs * 0.12; g.strokeStyle = opt.stroke || 'rgba(0,0,0,0)'; if (opt.stroke) g.strokeText(txt, W / 2, H / 2);
       g.fillStyle = opt.color || '#fff'; g.fillText(txt, W / 2, H / 2); if (opt.glow) g.fillText(txt, W / 2, H / 2);
     });
@@ -116,6 +116,15 @@
     g.traverse(o => { if (o.isMesh) o.castShadow = true; });
     return g;
   }
+  // ---------- ことば（看板など canvas の文字） ----------
+  const OK_OPT = { color: '#bff1ff', stroke: '#0a3a6a', fs: 90 }, SIGN_OPT = { color: '#fff4fb', glow: '#ff4fd8', fs: 120, w: 1024, h: 200 };
+  R.relabel = function () {
+    if (!R.sign) return;
+    const swap = (m, t) => { const o = m.map; m.map = t; m.needsUpdate = true; if (o) o.dispose(); };
+    swap(R.sign.material, textTex(I18N.t('sign'), I18N.lang === 'ko' ? Object.assign({}, SIGN_OPT, { glowK: 0.12 }) : SIGN_OPT)); swap(R.okTag.material, textTex(I18N.t('ok_tag'), OK_OPT));
+  };
+  const relabelSoon = () => { const f = I18N.lang === 'ko' ? '400 40px "Black Han Sans"' : '400 40px "Dela Gothic One"'; try { document.fonts.load(f, I18N.t('sign')).then(R.relabel, R.relabel); } catch (e) { R.relabel(); } };
+  document.addEventListener('langchange', relabelSoon);
   // ---------- 初期化 ----------
   R.init = function (el) {
     const ren = R.ren = new T.WebGLRenderer({ antialias: !lo, powerPreference: 'high-performance', preserveDrawingBuffer: !!window.__pvCap });
@@ -149,7 +158,7 @@
     R.ball = new T.Mesh(new T.SphereGeometry(C.BALL_R, 32, 20), new T.MeshStandardMaterial({ roughness: 0.18, metalness: 0.15 })); R.ball.castShadow = true; sc.add(R.ball);
     R.glowRed = glowTex('rgba(255,70,60,1)'); R.glowBlue = glowTex('rgba(80,200,255,1)');
     R.aura = new T.Sprite(new T.SpriteMaterial({ map: R.glowRed, transparent: true, depthWrite: false, blending: T.AdditiveBlending })); R.aura.scale.set(1.6, 1.6, 1); sc.add(R.aura);
-    R.okTag = new T.Sprite(new T.SpriteMaterial({ map: textTex('とめられる！', { color: '#bff1ff', stroke: '#0a3a6a', fs: 90 }), transparent: true, depthTest: false })); R.okTag.scale.set(3.0, 0.56, 1); R.okTag.renderOrder = 5; sc.add(R.okTag);
+    R.okTag = new T.Sprite(new T.SpriteMaterial({ map: textTex(I18N.t('ok_tag'), OK_OPT), transparent: true, depthTest: false })); R.okTag.scale.set(3.0, 0.56, 1); R.okTag.renderOrder = 5; sc.add(R.okTag);
     // 球の通ったあと
     R.trailN = 40; R.trailPts = [];
     R.trail = new T.Mesh(new T.BufferGeometry(), new T.MeshBasicMaterial({ color: '#ff5a4a', transparent: true, opacity: 0.35, depthWrite: false, side: T.DoubleSide, blending: T.AdditiveBlending }));
@@ -218,8 +227,8 @@
     const pit = new T.Mesh(new T.PlaneGeometry(laneW + 3, 3), new T.MeshStandardMaterial({ color: '#0c0614' })); pit.rotation.x = -Math.PI / 2; pit.position.set(0, -0.3, C.PIT_Z + 0.7); sc.add(pit);
     const back = new T.Mesh(new T.PlaneGeometry(laneW + 3, 3), new T.MeshStandardMaterial({ color: '#1c0f2e', roughness: 0.9 })); back.position.set(0, 1.2, C.PIT_Z + 1.4); back.rotation.y = Math.PI; sc.add(back);
     const mask = new T.Mesh(new T.BoxGeometry(laneW + 3, 2.4, 0.3), new T.MeshStandardMaterial({ color: '#2a1550', roughness: 0.8 })); mask.position.set(0, 3.9, C.PIT_Z + 0.4); sc.add(mask);
-    const sign = new T.Mesh(new T.PlaneGeometry(9, 1.7), new T.MeshBasicMaterial({ map: textTex('ピンチボウル', { color: '#fff4fb', glow: '#ff4fd8', fs: 120, w: 1024, h: 200 }), transparent: true }));
-    sign.position.set(0, 3.95, C.PIT_Z + 0.2); sign.rotation.y = Math.PI; sc.add(sign); R.sign = sign;
+    const sign = new T.Mesh(new T.PlaneGeometry(9, 1.7), new T.MeshBasicMaterial({ map: textTex(I18N.t('sign'), SIGN_OPT), transparent: true }));
+    sign.position.set(0, 3.95, C.PIT_Z + 0.2); sign.rotation.y = Math.PI; sc.add(sign); R.sign = sign; relabelSoon();
     // ネオンの線
     for (const [y, c] of [[2.65, '#3af0ff'], [5.15, '#ff4fd8']]) { const n = new T.Mesh(new T.BoxGeometry(laneW + 3, 0.06, 0.06), new T.MeshBasicMaterial({ color: c })); n.position.set(0, y, C.PIT_Z + 0.2); sc.add(n); }
     // となりのレーン（かざり）

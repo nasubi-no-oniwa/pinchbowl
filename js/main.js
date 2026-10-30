@@ -6,6 +6,7 @@
 (function () {
   const C = PB.C, R = PB.R, I = PB.In, S = PB.S;
   const $ = id => document.getElementById(id);
+  const T = I18N.t;
   const PICK_T = 12, INTRO_T = 1.7, RES_T = 2.6, TURNS = C.THROWS * 2;
   const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
   const look = { col: +(store('pb_col') || 0) % PB.COLORS.length, hat: +(store('pb_hat') || 0) % PB.HATS.length };
@@ -25,9 +26,9 @@
   // ---------- タイトル ----------
   function buildTitle() {
     const cr = $('col-row'); cr.innerHTML = '';
-    PB.COLORS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'sw' + (i === look.col ? ' on' : ''); b.style.background = c.c; b.title = c.name; b.onclick = () => { look.col = i; store('pb_col', i); S.ui(); buildTitle(); R.setLook(look); }; cr.appendChild(b); });
+    PB.COLORS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'sw' + (i === look.col ? ' on' : ''); b.style.background = c.c; b.title = T(c.name); b.onclick = () => { look.col = i; store('pb_col', i); S.ui(); buildTitle(); R.setLook(look); }; cr.appendChild(b); });
     const hr = $('hat-row'); hr.innerHTML = '';
-    PB.HATS.forEach((h, i) => { const b = document.createElement('button'); b.className = 'hat' + (i === look.hat ? ' on' : ''); b.textContent = h.name; b.onclick = () => { look.hat = i; store('pb_hat', i); S.ui(); buildTitle(); R.setLook(look); }; hr.appendChild(b); });
+    PB.HATS.forEach((h, i) => { const b = document.createElement('button'); b.className = 'hat' + (i === look.hat ? ' on' : ''); b.textContent = T(h.name); b.onclick = () => { look.hat = i; store('pb_hat', i); S.ui(); buildTitle(); R.setLook(look); }; hr.appendChild(b); });
   }
   const titleView = (() => { const L = PB.layout(); return { pins: L.map(([x, z]) => [x, PB.PIN_CM, z, 0, 0, 0, 1]), ball: null, me: 0, stoppable: false, held: false, blown: false, bv: 0, out: true }; })();
   function toTitle() {
@@ -38,7 +39,7 @@
   // ---------- 試合のはじまり ----------
   function newMatch(o) {
     G = Object.assign({
-      mode: 'cpu', slot: 0, names: ['あなた', 'CPU'], looks: [look, look], lanes: [null, null], views: [null, null], remain: [100, 100], downs: [[], []],
+      mode: 'cpu', slot: 0, names: [T('you'), 'CPU'], looks: [look, look], lanes: [null, null], views: [null, null], remain: [100, 100], downs: [[], []],
       k: -1, phase: 'pick', pt: 0, snaps: [[], []], picks: [null, null], aimX: 0, spinK: 0, charge: -1, thrown: false, camMode: 0, blownBy: -1, seed: (Math.random() * 1e9) | 0,
     }, o);
     G.pickIdx = null;
@@ -53,12 +54,12 @@
     R.setLook(G.looks[G.my]);
     G.snapCam = true;
     G.pickView = { pins: titleView.pins.map(p => p.slice()), ball: null, me: -1, stoppable: false, held: false, blown: false, bv: 0, out: true };
-    if (G.slot >= 0) { banner('自分になるピンを<br>タップ！', 'yel', 2.2); $('hint').textContent = '前ほどボーナス！（生き残ったら +15 / +8 本）　でも球は速くて危ない'; }
-    else $('hint').textContent = 'ふたりがピンをえらんでいます…';
+    if (G.slot >= 0) { banner(T('pick_tap'), 'yel', 2.2); $('hint').textContent = T('pick_hint'); }
+    else $('hint').textContent = T('pick_wait');
   }
   function choosePin(i) {
     if (G.phase !== 'pick' || G.picks[G.my] != null || G.slot < 0) return;
-    G.picks[G.my] = i; G.pickView.me = i; S.pick(); banner('このピンが<br>あなた！', 'blue', 1.4); $('hint').textContent = '';
+    G.picks[G.my] = i; G.pickView.me = i; S.pick(); banner(T('pick_me'), 'blue', 1.4); $('hint').textContent = '';
     if (G.mode === 'net') room.sendPick(i);
   }
   function autoPick() { const L = PB.layout(); const pool = L.map((p, i) => [i, p[2]]).filter(a => a[1] >= 6); return pool[(Math.random() * pool.length) | 0][0]; }
@@ -88,12 +89,12 @@
     R.setLook(G.looks[df]); R.setBall(G.looks[th].col); R.setFace('me'); R.trailPts.length = 0;
     const me = G.slot;
     const n = Math.floor(G.k / 2) + 1;
-    $('tn').textContent = n + '投目 / ' + C.THROWS;
+    $('tn').textContent = T('throw_n', { n, m: C.THROWS });
     for (const s of [0, 1]) $('pl' + s).classList.toggle('turn', s === df);
     let t;
-    if (me === th) t = 'あなたが投げる！<small>' + esc(G.names[df]) + ' のピンをねらえ</small>';
-    else if (me === df) t = 'よけろ！<small>' + esc(G.names[th]) + ' が投げてくる</small>';
-    else t = esc(G.names[th]) + ' が投げる<small>' + esc(G.names[df]) + ' がよける</small>';
+    if (me === th) t = T('t_me_throw', { name: esc(G.names[df]) });
+    else if (me === df) t = T('t_me_dodge', { name: esc(G.names[th]) });
+    else t = T('t_watch', { a: esc(G.names[th]), b: esc(G.names[df]) });
     banner(t, me === df ? 'blue' : '', INTRO_T); S.turn();
     G.before = G.lanes[df] ? G.lanes[df].standing() : G.remain[df];
     if (G.lanes[df]) G.lanes[df].takeEv();
@@ -102,10 +103,10 @@
     G.phase = 'aim'; G.pt = 0;
     const th = thrower(G.k), df = defender(G.k);
     $('hud').classList.toggle('dodge', G.slot === df);
-    if (G.slot === th) { I.mode = 'throw'; $('hud').classList.add('throw'); $('hint').textContent = '左右ドラッグで位置　↑ スワイプで投げる（指を曲げるとカーブ）'; }
-    else if (G.slot === df) { I.mode = 'dodge'; $('hint').textContent = '左がわをさわって動く（ピンにぶつかると倒れる）'; }
+    if (G.slot === th) { I.mode = 'throw'; $('hud').classList.add('throw'); $('hint').textContent = T('hint_throw'); }
+    else if (G.slot === df) { I.mode = 'dodge'; $('hint').textContent = T('hint_dodge'); }
     else { I.mode = 'none'; $('hint').textContent = ''; }
-    $('ph').textContent = G.slot === th ? 'ねらって投げる' : G.slot === df ? 'よける' : '観戦';
+    $('ph').textContent = T(G.slot === th ? 'ph_aim' : G.slot === df ? 'ph_dodge' : 'ph_watch');
     if (G.pendingThrow && (G.pendingThrow.k == null || G.pendingThrow.k === G.k)) { const t = G.pendingThrow; G.pendingThrow = null; launch(t); }
     else G.pendingThrow = null;
   }
@@ -121,7 +122,7 @@
   function launch(t) {
     const df = defender(G.k), L = G.lanes[df];
     G.thrown = true; G.bm = t.bm || null; L.setBumper(G.bm); L.throwBall(t); G.phase = 'roll'; G.pt = 0; G.lastT = t;
-    $('hud').classList.add('roll'); $('hint').textContent = G.slot === df ? 'よけろ！　青く光ったら止められる' : '';
+    $('hud').classList.add('roll'); $('hint').textContent = G.slot === df ? T('hint_roll') : '';
     if (G.mode === 'net') room.sendState(L, 'roll', G.k, true);
   }
   // ---------- 1フレーム ----------
@@ -148,7 +149,7 @@
     if (G.phase === 'pick') {
       R.draw(G.pickView, dt, { showMe: G.pickView.me >= 0, arrow: true });
       camPick();
-      const left = Math.max(0, PICK_T - G.pt); $('ph').textContent = 'ピンをえらぶ ' + Math.ceil(left); $('tbar').style.width = (left / PICK_T * 100) + '%'; $('tn').textContent = '';
+      const left = Math.max(0, PICK_T - G.pt); $('ph').textContent = T('ph_pick', { n: Math.ceil(left) }); $('tbar').style.width = (left / PICK_T * 100) + '%'; $('tn').textContent = '';
       if (G.slot >= 0 && G.picks[G.my] == null && left <= 0) choosePin(autoPick());
       if (G.mode === 'cpu' && G.picks[1] == null && G.pt > 0.8) G.picks[1] = PB.cpuPick(G.lv);
       const ready = G.picks[0] != null && G.picks[1] != null;
@@ -215,11 +216,11 @@
     PB.S.roll(0);
     if (res.blown) { G.blownBy = df; return; }
     const mine = G.slot === df, thMe = G.slot === thrower(res.k);
-    let t = res.down + '本たおれた', cls = '';
-    if (res.down === 0) t = 'ノーダメージ！';
-    if (res.down >= 45) { t = 'だいはかい！<small>' + res.down + '本たおれた</small>'; cls = 'yel'; }
-    if (res.stop) t = 'ストップ！<small>' + res.down + '本たおれた</small>', cls = 'blue';
-    banner(t + '<small>のこり ' + res.n + '本</small>', cls, RES_T - 0.2);
+    let t = T('down_n', { n: res.down }), cls = '';
+    if (res.down === 0) t = T('nodmg');
+    if (res.down >= 45) { t = T('big') + '<small>' + T('down_n', { n: res.down }) + '</small>'; cls = 'yel'; }
+    if (res.stop) t = T('stop') + '<small>' + T('down_n', { n: res.down }) + '</small>', cls = 'blue';
+    banner(t + '<small>' + T('left_n', { n: res.n }) + '</small>', cls, RES_T - 0.2);
     if (mine) (res.down <= 15 ? S.good : S.bad)(); else if (thMe) (res.down >= 25 ? S.good : S.ui)();
   }
   function finish(loser) {
@@ -234,12 +235,12 @@
       if (!G || G.phase !== 'end') return;
       const me = G.slot;
       const t = $('res-t'); t.className = 'res-t';
-      if (me < 0) { t.textContent = win < 0 ? 'ひきわけ' : G.names[win] + ' の勝ち'; }
-      else if (win < 0) t.textContent = 'ひきわけ';
-      else if (win === me) { t.textContent = 'かち！'; t.classList.add('win'); S.win(); }
-      else { t.textContent = 'まけ…'; S.lose(); }
-      $('res-why').textContent = loser >= 0 ? G.names[loser] + ' が球に当たってふっとんだ！' : 'のこったピン＋前列ボーナスで勝負！';
-      for (const s of [0, 1]) $('rs' + s).innerHTML = `<div class="n" style="color:${PB.COLORS[G.looks[s].col].d}">${esc(G.names[s])}</div><div class="c">${loser === s ? 'ふっとび' : tot[s]}<small>${loser === s ? '' : '点'}</small></div>${loser === s ? '' : `<div class="bo">のこり${r[s]}本${bonusOf(G.picks[s]) ? ' ＋ 前列ボーナス' + bonusOf(G.picks[s]) : ''}</div>`}<div class="ls">${G.downs[s].map(d => '−' + d).join(' ')}</div>`;
+      if (me < 0) { t.textContent = win < 0 ? T('res_draw') : T('x_wins', { name: G.names[win] }); }
+      else if (win < 0) t.textContent = T('res_draw');
+      else if (win === me) { t.textContent = T('res_win'); t.classList.add('win'); S.win(); }
+      else { t.textContent = T('res_lose'); S.lose(); }
+      $('res-why').textContent = loser >= 0 ? T('why_blown', { name: G.names[loser] }) : T('why_score');
+      for (const s of [0, 1]) $('rs' + s).innerHTML = `<div class="n" style="color:${PB.COLORS[G.looks[s].col].d}">${esc(G.names[s])}</div><div class="c">${loser === s ? T('out') : tot[s]}<small>${loser === s ? '' : T('pts')}</small></div>${loser === s ? '' : `<div class="bo">${T('rem_n', { n: r[s] })}${bonusOf(G.picks[s]) ? T('bonus_plus', { b: bonusOf(G.picks[s]) }) : ''}</div>`}<div class="ls">${G.downs[s].map(d => '−' + d).join(' ')}</div>`;
       $('res-note').textContent = '';
       $('btn-again').classList.toggle('hide', G.mode === 'net' && G.slot < 0);
       show('s-result');
@@ -290,7 +291,7 @@
   function placeMode(on) {
     if (!G || G.phase !== 'aim' || G.thrown || G.slot !== thrower(G.k)) return;
     G.placing = on; I.mode = on ? 'place' : 'throw'; I.reset(); $('bump-ui').classList.toggle('on', on);
-    $('hint').textContent = on ? 'さわった場所にバンパー　↻で向きをかえる' : '左右ドラッグで位置　↑ スワイプで投げる（指を曲げるとカーブ）';
+    $('hint').textContent = on ? T('hint_bump') : T('hint_throw');
     if (on) R.aim(0, 0, 0, 0, false);
   }
   // ---------- 小さな地図（上から） ----------
@@ -330,10 +331,10 @@
       else if (e.k === 'pp') { if (Math.random() < 0.35) S.pin(Math.min(0.6, e.v / 10), pan); }
       else if (e.k === 'rail') { S.rail(Math.min(1, e.v / 12), pan); R.shake = Math.max(R.shake, 0.06); }
       else if (e.k === 'bumper') { S.rail(Math.min(1, e.v / 12), pan); R.burst(e.x, 0.4, e.z, 8, '#ffd23a', 3); R.shake = Math.max(R.shake, 0.08); }
-      else if (e.k === 'self') { G.selfAcc++; if (G.pt - G.selfT > 0.5) { toast((G.slot === df ? 'じばく！' : 'あいてがじばく！') + ' −' + G.selfAcc); G.selfAcc = 0; G.selfT = G.pt; } }
+      else if (e.k === 'self') { G.selfAcc++; if (G.pt - G.selfT > 0.5) { toast(T(G.slot === df ? 'self' : 'opp_self') + ' −' + G.selfAcc); G.selfAcc = 0; G.selfT = G.pt; } }
       else if (e.k === 'bump') { S.bump(Math.min(1, e.v / 3), pan); }
-      else if (e.k === 'stop') { S.stop(); R.burst(R.ball.position.x, 0.4, R.ball.position.z, 12, '#4ac8ff', 3); banner('ストップ！', 'blue', 1.2); G.stoppedSaid = true; }
-      else if (e.k === 'blown') { S.blown(); R.shake = 0.5; G.slowUntil = G.pt + 1.3; const m = G.views[df] && G.views[df].pins[G.views[df].me]; if (m) R.burst(m[0], 0.6, m[2], 20, '#ffd23a', 5); banner(G.slot === df ? 'ふっとび！<small>まけ…</small>' : esc(G.names[df]) + ' がふっとんだ！', 'yel', 2.6); }
+      else if (e.k === 'stop') { S.stop(); R.burst(R.ball.position.x, 0.4, R.ball.position.z, 12, '#4ac8ff', 3); banner(T('stop'), 'blue', 1.2); G.stoppedSaid = true; }
+      else if (e.k === 'blown') { S.blown(); R.shake = 0.5; G.slowUntil = G.pt + 1.3; const m = G.views[df] && G.views[df].pins[G.views[df].me]; if (m) R.burst(m[0], 0.6, m[2], 20, '#ffd23a', 5); banner(G.slot === df ? T('blown_me') : T('blown_x', { name: esc(G.names[df]) }), 'yel', 2.6); }
       else if (e.k === 'throw') S.throw();
     }
   }
@@ -404,8 +405,8 @@
       const sp = Math.round(v.bv * 3.6), ok = v.stoppable;
       if (sp !== lastSpd) { $('spd-v').textContent = v.held ? '0' : sp; lastSpd = sp; }
       $('spd').classList.toggle('ok', ok || v.held);
-      $('spd').querySelector('span').textContent = ok ? 'とめられる' : 'はやさ';
-      $('ph').textContent = G.slot === df ? 'よけろ！' : 'いけー！';
+      $('spd').querySelector('span').textContent = T(ok ? 'can_stop' : 'speed');
+      $('ph').textContent = T(G.slot === df ? 'ph_dodge2' : 'ph_go');
       $('tbar').style.width = '0%';
       if (v.ball && !v.out) PB.S.roll(Math.min(1, v.bv / 14), Math.max(-1, Math.min(1, -(v.ball[0] - R.cam.position.x) / 6))); else PB.S.roll(0);
       // あぶない！の合図
@@ -419,7 +420,7 @@
     G.paused = !G.paused; show(G.paused ? 's-pause' : null); I.reset();
   }
   // ---------- オンライン ----------
-  function loadScript(src) { return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = () => rej(new Error('通信できませんでした。電波のよいところでもう一度ためしてください')); document.head.appendChild(el); }); }
+  function loadScript(src) { return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = () => rej(new Error(T('err_net'))); document.head.appendChild(el); }); }
   async function getDb() {
     if (PB._db) return PB._db;
     const v = '10.12.2';
@@ -428,17 +429,17 @@
     return PB._db = firebase.database();
   }
   async function joinOnline() {
-    const name = $('in-name').value.trim() || 'ななし', code = $('in-code').value.trim();
+    const name = $('in-name').value.trim() || T('noname'), code = $('in-code').value.trim();
     store('pb_name', name); store('pb_code', code); $('on-err').textContent = '';
-    if (!PB.cleanCode(code)) { $('on-err').textContent = 'あいことばを入れてください'; return; }
+    if (!PB.cleanCode(code)) { $('on-err').textContent = T('err_code_short'); return; }
     let db; try { db = await getDb(); } catch (e) { $('on-err').textContent = e.message; return; }
     $('btn-join').disabled = true;
     try {
       room = new PB.Room(db, code, name, roomCb, { col: look.col, hat: look.hat });
       const r = await room.join();
       $('on-form').classList.add('hide'); $('on-wait').classList.remove('hide');
-      $('on-msg').textContent = r.watching ? '観戦します。試合を待っています…' : 'あいてを待っています…';
-    } catch (e) { $('on-err').textContent = e.message || 'つながりませんでした'; room = null; }
+      $('on-msg').textContent = r.watching ? T('watch_wait') : T('waiting');
+    } catch (e) { $('on-err').textContent = e.message || T('err_conn'); room = null; }
     $('btn-join').disabled = false;
   }
   const roomCb = {
@@ -448,7 +449,7 @@
     },
     onWatchers(n) { },
     onMatch(m) {   // 試合がはじまる
-      newMatch({ mode: 'net', slot: m.slot, names: m.names.map(x => x || '？'), looks: m.looks, seed: m.seed, lv: 'normal' });
+      newMatch({ mode: 'net', slot: m.slot, names: m.names.map(x => x || '?'), looks: m.looks, seed: m.seed, lv: 'normal' });
       if (m.slot < 0) $('hud').classList.add('watch');
       G.m = m.m;
     },
@@ -475,8 +476,8 @@
       if (res.k === G.k && G.phase !== 'res' && G.phase !== 'end') showRes(res);
       else if (res.k < G.k) { G.remain[df] = res.n; $('pl' + df).querySelector('.cnt').textContent = res.n; if (G.downs[df].length < Math.floor(res.k / 2) + 1) G.downs[df].push(res.down); }
     },
-    onOver(o) { if (G && G.mode === 'net' && o.gone && G.phase !== 'end') { banner('あいてがいなくなりました', '', 2.5); setTimeout(() => toTitle(), 2600); } },
-    onLeft() { if (G && G.mode === 'net' && G.phase !== 'end') { G.phase = 'end'; banner('あいてがいなくなりました', '', 2.5); setTimeout(() => toTitle(), 2600); } else if (!G) { $('on-msg').textContent = 'あいてを待っています…'; } },
+    onOver(o) { if (G && G.mode === 'net' && o.gone && G.phase !== 'end') { banner(T('opp_gone'), '', 2.5); setTimeout(() => toTitle(), 2600); } },
+    onLeft() { if (G && G.mode === 'net' && G.phase !== 'end') { G.phase = 'end'; banner(T('opp_gone'), '', 2.5); setTimeout(() => toTitle(), 2600); } else if (!G) { $('on-msg').textContent = T('waiting'); } },
   };
   // ---------- ボタン ----------
   function bind() {
@@ -486,8 +487,9 @@
     $('btn-on-back').onclick = () => { S.ui(); if (room) { room.leave(); room = null; } show('s-title'); };
     $('btn-howto').onclick = () => { PB.audio(); S.ui(); show('s-howto'); };
     $('btn-how-back').onclick = () => { S.ui(); show('s-title'); };
-    $('btn-snd').onclick = () => { PB.audio(); const m = !PB.mute(); PB.mute(m); $('snd-name').textContent = m ? 'なし' : 'あり'; };
-    $('snd-name').textContent = PB.mute() ? 'なし' : 'あり';
+    $('btn-snd').onclick = () => { PB.audio(); const m = !PB.mute(); PB.mute(m); $('snd-name').textContent = T(m ? 'snd_off' : 'snd_on'); };
+    $('snd-name').textContent = T(PB.mute() ? 'snd_off' : 'snd_on');
+    document.addEventListener('langchange', () => { $('snd-name').textContent = T(PB.mute() ? 'snd_off' : 'snd_on'); buildTitle(); });
     $('btn-pause').onclick = () => { if (G && G.mode === 'net') { if (confirmLeave()) toTitle(); return; } togglePause(); };
     $('btn-resume').onclick = () => togglePause();
     $('btn-quit').onclick = () => { if (G) G.paused = false; toTitle(); };
@@ -499,14 +501,14 @@
     $('btn-auto').onclick = () => { if (G && G.phase === 'pick') choosePin(autoPick()); };
     $('btn-again').onclick = () => {
       S.ui();
-      if (G && G.mode === 'net' && room) { $('res-note').textContent = 'あいてを待っています…'; room.rematch(); return; }
+      if (G && G.mode === 'net' && room) { $('res-note').textContent = T('waiting'); room.rematch(); return; }
       const o = G; newMatch({ mode: 'cpu', lv: o.lv, looks: o.looks });
     };
     $('btn-title').onclick = () => { S.ui(); toTitle(); };
     document.addEventListener('visibilitychange', () => { if (document.hidden && G && G.mode === 'cpu' && !G.paused && G.phase !== 'end') togglePause(); });
   }
   let leaveAsk = 0;
-  function confirmLeave() { const n = Date.now(); if (n - leaveAsk < 2500) return true; leaveAsk = n; banner('もう一度おすと<br>タイトルにもどります', '', 2.4); return false; }
+  function confirmLeave() { const n = Date.now(); if (n - leaveAsk < 2500) return true; leaveAsk = n; banner(T('leave_confirm'), '', 2.4); return false; }
   // ---------- 起動 ----------
   function boot() {
     R.init($('view')); I.attach(document.body); bind(); buildTitle(); R.setLook(look);
